@@ -15,10 +15,12 @@ parameters {
   vector<lower=0>[K] M;
 }
 model {
+  // Priors --------------------------------------------------------------------
   k   ~ normal(0, 10);
-  a50 ~ normal(a50_prior_mean, 2);
+  a50 ~ normal(a50_prior_mean, 10);
   M   ~ normal(M_prior_mean, 0.01);
 
+  // Likelihood ----------------------------------------------------------------
   for (s in 1:K) {
     int n = A[s];
     vector[n] Sa;
@@ -26,14 +28,17 @@ model {
     vector[n] pred;
     vector[n] p;
 
+    // Selectivity
     for (a in 1:n) {
       int idx = start_idx[s] + a - 1;
       Sa[a] = 1 / (1 + exp(-k[s] * (rel_age[idx] - a50[s])));
     }
+    // Relative numbers-at-age
     Na[1] = 1; 
     for (a in 2:n) {
       Na[a] = Na[a-1] * exp(-M[s]);
     }
+    // Predicted catch
     for (a in 1:n) {
       pred[a] = Sa[a] * Na[a];
     }
