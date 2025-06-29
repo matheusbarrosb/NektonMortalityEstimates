@@ -1,0 +1,1309 @@
+---
+title: "Report on juvenile natural mortality at Point aux Pins Peninsula"
+author: "Matheus de Barros"
+date: "2023-04-25"
+output:
+  word_document: default
+  html_document:
+    df_print: paged
+  pdf_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Introduction
+
+This is a report for preliminary estimates of natural mortality for marsh-resident juvenile fish species collected during summer 2020 at the Point aux Pins peninsula, Mississippi Sound, coastal Alabama. Here I synthesize the choice of input parameters and methods used to estimate daily mortality rates for juveniles of hardhead catfish _Arius felis_, silver perch _Bairdiella chrysoura_, blue crab _Callinectes sapidus_, white trout _Cynoscion arenarius_, spotted seatrout _Cynoscion nebulosus_, gulf killifish _Fundulus grandis_, pinfish _Lagodon rhomboides_, and white shrimp _Litopeaneus setiferus_.
+
+### The length-converted catch-curve
+
+I chose the length-converted catch-curve (LCCC) to derive estimates of mortality for the species analyzed herein. Over the course of this document, I will be referring to the mortality estimates as natural mortality (M), as there's no fishing pressure targeting any of the species at this life stage in the region. The framework used to run the LCCC was the "i-LCCC" (improved length-converted catch-curve, see de Barros 2023 for freely available code), which further advances mortality estimation by (1) bootstrapping the input abundance-at-length data to estimate uncertainty coming from sampling errors and fitting the linear regression over the log-transformed abundances, and (2) allowing to estimate mortality with size distributions with a maximum size larger than the asymptotic length (Linf).
+
+The catch curve relies on the following framework:
+
+Numbers-at-age decrease over time according to the instantaneous rate of total mortality (Z):
+
+$$N_{t} = N_{t-1}e^{-Z(t)}$$
+
+$$ln[N_{t}] = ln[N_{t-1}] - Zt$$
+
+Simply assuming that catch (C) is related to numbers-at-age (i.e. the observed proportions-at-age from the sample reflects the expected population age distribution) allows us to estimate Z by tracking catch-at-age through time. The rate of decline = Z:
+
+$$ln[C_{t}] = ln[C_{t-1}] - Zt$$
+
+In the length-converted catch-curve, age is estimated from the observed length composition using growth parameters. Assuming growth follows a von Bertalanffy function, we can estimate relative age (aL), which is the expected age an individual would be at a given length:
+
+$$a_{L} = t0 - (1/k) ln(1-L/L_{\infty})$$
+
+### Input parameters
+
+The length converted catch-curve requires growth parameters as input to transform observed size frequencies into relative ages. It is ideal to use estimated growth parameters from the study site, but plotting length frequencies over time (Figures 1, 2, 3, 4, 5, 6, 7, and 8) show that it is only possible to track cohorts through modal class progression for the spotted seatrout and pinfish, therefore making the estimation of absolute growth rates for most species unfeasible. Despite ELEFAN (ELectronic LEngth Frequency ANalysis) being more robust to data which cohort tracking is harder, it is likely that growth parameter estimates will end up being trapped in multiple local maxima during the estimation given the absence of pretty much any distinguishable cohorts in the datasets of the remaining species, likely a result of continuous recruitment (see Schwamborn et al 2019). Given those mentioned caveats, I have chosen to survey the literature for growth parameters for all species. When multiple estimates are available at the literature, I simply chose the one coming from a study from closest location to the study site. Growth curves were also inspected to make sure estimates are not highly uncertain or doubtful. Estimates of absolute growth for juveniles were given priority, and von Bertalanffy growth parameters were collected if the later were unavailable. If the surveyed studies did not report uncertainty in parameter estimates, I assumed a coefficient of variation of 20% around the mean estimates, which is pretty close to a standard deviation of 0.2. Input parameters are summarized in Table 1 below.
+
+```{r fig.fullwidth=TRUE, fig.height=30, fig.width=25, message=FALSE, warning=FALSE, echo=FALSE, message=FALSE, warning=FALSE}
+
+set.seed(2023)
+
+setwd('G:/.shortcut-targets-by-id/1avidn3l8UPCyW6_A-M00EH-A2Q3J-f3P/BakerLabDrive/PeoplesFolders/Barros_Matheus/Manuscripts/Mortality estimates/Data')
+
+ARIFEL_PaP <- read.csv('G:/.shortcut-targets-by-id/1avidn3l8UPCyW6_A-M00EH-A2Q3J-f3P/BakerLabDrive/PeoplesFolders/Barros_Matheus/Manuscripts/Mortality estimates/Data/ARIFEL_PaP.csv')
+BAICHR_PaP <- read.csv('G:/.shortcut-targets-by-id/1avidn3l8UPCyW6_A-M00EH-A2Q3J-f3P/BakerLabDrive/PeoplesFolders/Barros_Matheus/Manuscripts/Mortality estimates/Data/BAICHR_PaP.csv')
+CALSAP_PaP <- read.csv('G:/.shortcut-targets-by-id/1avidn3l8UPCyW6_A-M00EH-A2Q3J-f3P/BakerLabDrive/PeoplesFolders/Barros_Matheus/Manuscripts/Mortality estimates/Data/CALSAP_PaP.csv')
+CYNARE_PaP <- read.csv('G:/.shortcut-targets-by-id/1avidn3l8UPCyW6_A-M00EH-A2Q3J-f3P/BakerLabDrive/PeoplesFolders/Barros_Matheus/Manuscripts/Mortality estimates/Data/CYNARE_PaP.csv')
+CYNNEB_PaP <- read.csv('G:/.shortcut-targets-by-id/1avidn3l8UPCyW6_A-M00EH-A2Q3J-f3P/BakerLabDrive/PeoplesFolders/Barros_Matheus/Manuscripts/Mortality estimates/Data/CYNNEB_PaP.csv')
+FUNGRA_PaP <- read.csv('G:/.shortcut-targets-by-id/1avidn3l8UPCyW6_A-M00EH-A2Q3J-f3P/BakerLabDrive/PeoplesFolders/Barros_Matheus/Manuscripts/Mortality estimates/Data/FUNGRA_PaP.csv')
+LAGRHO_PaP <- read.csv('G:/.shortcut-targets-by-id/1avidn3l8UPCyW6_A-M00EH-A2Q3J-f3P/BakerLabDrive/PeoplesFolders/Barros_Matheus/Manuscripts/Mortality estimates/Data/LAGRHO_PaP.csv')
+LITSET_PaP <- read.csv('G:/.shortcut-targets-by-id/1avidn3l8UPCyW6_A-M00EH-A2Q3J-f3P/BakerLabDrive/PeoplesFolders/Barros_Matheus/Manuscripts/Mortality estimates/Data/LITSET_PaP.csv')
+
+library(TropFishR)
+require(Matrix)
+require(dplyr)
+
+ARIFEL_PaP$samp_date <- as.Date(ARIFEL_PaP$samp_date, format = "%d.%m.%Y")
+BAICHR_PaP$samp_date <- as.Date(BAICHR_PaP$samp_date, format = "%d.%m.%Y")
+CALSAP_PaP$samp_date <- as.Date(CALSAP_PaP$samp_date, format = "%d.%m.%Y")
+CYNARE_PaP$samp_date <- as.Date(CYNARE_PaP$samp_date, format = "%d.%m.%Y")
+CYNNEB_PaP$samp_date <- as.Date(CYNNEB_PaP$samp_date, format = "%d.%m.%Y")
+FUNGRA_PaP$samp_date <- as.Date(FUNGRA_PaP$samp_date, format = "%d.%m.%Y")
+LAGRHO_PaP$samp_date <- as.Date(LAGRHO_PaP$samp_date, format = "%d.%m.%Y")
+LITSET_PaP$samp_date <- as.Date(LITSET_PaP$samp_date, format = "%d.%m.%Y")
+
+LFQ.ARIFEL <- lfqCreate(data = ARIFEL_PaP, Lname = "Length", Dname = "samp_date", bin_size = 2)
+LFQ.BAICHR <- lfqCreate(data = BAICHR_PaP, Lname = "Length", Dname = "samp_date", bin_size = 2)
+LFQ.CALSAP <- lfqCreate(data = CALSAP_PaP, Lname = "Length", Dname = "samp_date", bin_size = 2)
+LFQ.CYNARE <- lfqCreate(data = CYNARE_PaP, Lname = "Length", Dname = "samp_date", bin_size = 2)
+LFQ.CYNNEB <- lfqCreate(data = CYNNEB_PaP, Lname = "Length", Dname = "samp_date", bin_size = 2)
+LFQ.FUNGRA <- lfqCreate(data = FUNGRA_PaP, Lname = "Length", Dname = "samp_date", bin_size = 2)
+LFQ.LAGRHO <- lfqCreate(data = LAGRHO_PaP, Lname = "Length", Dname = "samp_date", bin_size = 3)
+LFQ.LITSET <- lfqCreate(data = LITSET_PaP, Lname = "Length", Dname = "samp_date", bin_size = 1)
+
+par(mfrow = c(4,2),oma=c(1.5,1.5,0,0))
+
+plot(LFQ.ARIFEL, Fname = "catch", ylim = c(20,160), main = "Hardhead catfish", cex.sub = 2, cex.lab = 2, cex.main = 2.2, cex.axis = 2)
+plot(LFQ.BAICHR, Fname = "catch", main = "Silver perch", cex.sub = 1.75, , cex.sub = 2, cex.lab = 2, cex.main = 2.2, cex.axis = 2)
+plot(LFQ.CALSAP, Fname = "catch", main = "Blue crab", cex.sub = 2, cex.lab = 2, cex.main = 2.2, cex.axis = 2)
+plot(LFQ.CYNARE, Fname = "catch", main = "White trout", cex.sub = 2, cex.lab = 2, cex.main = 2.2, cex.axis = 2)
+plot(LFQ.CYNNEB, Fname = "catch", ylim = c(0,150),, main = "Spotted seatrout", cex.sub = 2, cex.lab = 2, cex.main = 2.2, cex.axis = 2)
+plot(LFQ.FUNGRA, Fname = "catch", , main = "Gulf killifish", cex.sub = 2, cex.lab = 2, cex.main = 2.2, cex.axis = 2)
+plot(LFQ.LAGRHO, Fname = "catch", ylim = c(0,160), , main = "Pinfish", cex.sub = 2, cex.lab = 2, cex.main = 2.2, cex.axis = 2)
+plot(LFQ.LITSET, Fname = "catch", main = "White shrimp", cex.sub = 2, cex.lab = 2, cex.main = 2.2, cex.axis = 2)
+mtext("Fig. 1. Size frequency distributions over time for juvenile nekton sampled at the Point aux Pins Peninsula, Northern GoM",side=1,line=0,outer=TRUE,cex=1.5)
+
+
+```
+
+\newpage
+
+#### Table 1. Growth parameters for each study species
+
+| Species                 | Absolute Growth | K (year-1)   | Linf (mm)  | t0 (year-1)  | Reference                | Location           |
+|-------------------------|-----------------|--------------|------------|--------------|--------------------------|--------------------|
+| _Arius felis_           | NA              | 0.25 (0.023) | 410 (2.81) | -1.24 (0.29) | Flinn et al (2019)       | Louisiana          |
+| _Bairdiella chrysoura_  | NA              | 1.32         | 116        | -1.02        | Sirot et al (2015)       | Yucatan, Mexico    |
+| _Callinectes sapidus_   | 0.513 (0.317)   | NA           | NA         | NA           | Hayes et al (2022)       | Northern GoM       |
+| _Cynoscion arenarius_   | NA              | 0.325        | 336.85     | -1.745       | Nemeth et al (2006)      | Florida Gulf Coast |
+| _Cynoscion nebulosus_   | NA              | 0.36         | 597.5      | -0.955       | Bohaboy et al (2018)     | Alabama            |
+| _Fundulus grandis_      | NA              | 2.43         | 87.27      | -0.022       | Vastano et al (2017)     | Louisiana          |
+| _Lagodon rhomboides_    | 0.5421 (0.07)   | NA           | NA         | NA           | Estimated locally        | Study site         |
+| _Litopeaneus setiferus_ | 0.77 (0.05)     | NA           | NA         | NA           | Baker and Minello (2010) | Texas              |
+  
+
+```{r,include=FALSE, message=FALSE, warning=FALSE}
+
+iLCCC <- function(mids = NULL,
+                  catch = NULL,
+                 K = NULL,
+                 Linf = NULL,
+                 t0 = NULL,
+                 binsize = NULL,
+                 ex.points = 1,
+                 plot = FALSE,
+                 plot.yup.lim = NULL,
+                 plot.ylow.lim = NULL,
+                 plot.xlow.lim = NULL,
+                 plot.xup.lim = NULL,
+                 N_runs = 1000) {
+
+  if (is.matrix(catch)) {
+    stop(noquote("Catch must be arranged as a vector"))
+  }
+
+  if (length(mids) != length(catch)) {
+    stop(noquote("Catch and midlengths must be vectors of same length"))
+  }
+
+  mids <- as.vector(mids)
+  catch <- as.vector(catch)
+  #upper and lower limits of each size class
+  class.min <- mids - (binsize/2)
+  class.max <- mids + (binsize/2)
+
+
+  if (t0 <- FALSE) {
+    t0 <- exp(-0.3922 - 0.2752*log(Linf) - 1.038*log(K))
+  } else {
+    t0 <- t0
+  }
+
+  rel.age <- ifelse(mids <= Linf, t0 - (1/K)*log(1 - mids/Linf), NA) # age at any given size class
+  dt <- ifelse(mids <= Linf, (t0 - (1/K)*log(1 - class.max/Linf)) - (t0 - (1/K)*log(1 - class.min/Linf)), NA) # amount of time from one size class to another
+  # if a midlength is larger than the asympotic size, it is simply excluded from subsequent analysis
+  # as calculating dt with midlenths > Linf leads to NaN values
+
+  lnNdt <- ifelse(is.na(dt), NA, log((catch+1)/dt)) # only calculate logged catch if the divisor is != NA
+
+  df <- data.frame(lnNdt, rel.age)
+  df <- na.exclude(df)
+  df[df == 0] <- NA #exclude zero values
+
+  yvar <- as.numeric(df$lnNdt)
+  xvar <- df$rel.age
+
+  selection <- c(which(yvar == max(yvar)) + 1,
+                 which(xvar == max(xvar)) - ex.points) # select the data rows after the mode (highest point) to fit the line
+  # if you suspect of undersampling, modify to c(which(yvar == max(yvar)) + 1,
+  # which(xvar == max(xvar))-1) or -2 or more, this should exclude the largest size classes in the sample from the regression
+
+  df.cc <- as.data.frame(cbind(xvar,yvar))
+  df.selec.cc <- df.cc[selection[1]:selection[2],]# creates a data frame with only the selected rows
+
+  df.selec.cc[is.finite(rowSums(df.selec.cc)),] # select only finite values
+  df.selec.cc[is.numeric(rowSums(df.selec.cc)),] # exclude NaN measurements
+
+  # some Infs and NaNs can pop up during the process when logarithms end up as imaginary or complex numbers
+
+  df.selec.cc <- subset(df.selec.cc, df.selec.cc$yvar > 1)
+
+  lm.cc <- lm(yvar ~ xvar,
+              data = df.selec.cc)
+
+  reg.output <- summary(lm.cc)
+  intercept.reg <- reg.output$coefficients[1]
+  slope.reg <- -reg.output$coefficients[2]
+  se.slope.reg <- reg.output$coefficients[4]
+
+  # bootstrap to obtain C.I.s for the total mortality
+
+  boot.Z <- NULL # empty object to store the Z replicates
+
+  for (i in 1:N_runs) {
+
+    resamp.df = df.selec.cc[sample(1:nrow(df.selec.cc),
+                                   nrow(df.selec.cc),
+                                   replace = TRUE),]
+
+    resamp.df <- resamp.df[apply(resamp.df, 1,
+                                 function(row) all(row != 0)),]
+    resamp.df[is.na(resamp.df) | resamp.df=="Inf"] <- NA
+    resamp.df[is.na(resamp.df) | resamp.df=="NaN"] <- NA
+
+    lm.boot <- lm(yvar ~ xvar,
+                  data = resamp.df,
+                  na.action = na.omit)
+
+    boot.Z <- c(boot.Z, lm.boot$coefficients[2])
+
+  }
+
+  Z <- median(-boot.Z)
+  Z.range <- range(-boot.Z)
+  Z.CI <- quantile(-boot.Z, probs = c(0.05, 0.95), na.rm = TRUE)
+  boot.Z <- as.vector(boot.Z)
+
+  output <- list(intercept.reg,
+                 Z, se.slope.reg,
+                 Z.CI, Z.range,
+                 as.vector(-boot.Z),
+                 df.selec.cc)
+  names(output) <- c("Intercept (a)", "Z",
+                     "Standard Error for Z",
+                     "Z bootstrapped 90% C.I.",
+                     "Range",
+                     "Z posterior distribution",
+                     "Regression input")
+
+  preds <- predict(lm.cc, pred.df = data.frame(x = df.selec.cc$xvar),
+                   interval = "confidence")
+
+  par(mfrow = c(1,1))
+
+  if (plot == TRUE) {
+
+    plot(yvar ~ xvar, xlab = "Relative age (years)",
+         ylab = "ln(Catch)/dt",
+         main = paste("Length-converted catch curve"),
+         cex.main = 0.8, ylim = c(plot.ylow.lim, plot.yup.lim),
+         xlim = c(plot.xlow.lim, plot.xup.lim))
+    mtext(paste("Median Z =", round(Z,3),
+                ", 95% C.I. =", round(Z.CI[1],3), "to", round(Z.CI[2],3)),
+          side = 3, cex = 0.7)
+    points(df.selec.cc$yvar ~ df.selec.cc$xvar, col = "black",
+           pch = 20)
+    abline(lm.cc)
+    lines(df.selec.cc$xvar, preds[,3], lty = "dashed")
+    lines(df.selec.cc$xvar, preds[,2], lty = "dashed")
+
+  }
+
+  return(output)
+
+}
+# end of function ---------------------------------------------------------------
+
+```
+
+
+```{r,include=FALSE, message=FALSE, warning=FALSE}
+
+iLCCC_abgrowth <- function(mids = NULL,
+                  catch = NULL,
+                 GR = NULL,
+                 t0 = NULL,
+                 binsize = NULL,
+                 ex.points = 1,
+                 plot = FALSE,
+                 N_runs = 1000, plot.xlow.lim = NULL, plot.xup.lim = NULL, plot.ylow.lim = NULL, plot.yup.lim = NULL) {
+
+  if (is.matrix(catch)) {
+    stop(noquote("Catch must be arranged as a vector"))
+  }
+
+  if (length(mids) != length(catch)) {
+    stop(noquote("Catch and midlengths must be vectors of same length"))
+  }
+
+  mids <- as.vector(mids)
+  catch <- as.vector(catch)
+  #upper and lower limits of each size class
+  class.min <- mids - (binsize/2)
+  class.max <- mids + (binsize/2)
+  
+  rel.age <- mids/GR # age at any given size class IN DAYS
+ 
+  # if a midlength is larger than the asympotic size, it is simply excluded from subsequent analysis
+
+  lnN <- log(catch+1)
+
+  df <- data.frame(lnN, rel.age)
+  df <- na.exclude(df)
+  #exclude zero values
+
+  yvar <- as.numeric(df$lnN)
+  xvar <- df$rel.age
+
+  selection <- c(which(yvar == max(yvar)) + 1,
+                 which(xvar == max(xvar)) - ex.points) # select the data rows after the mode (highest point) to fit the line
+  # if you suspect of undersampling, modify to c(which(yvar == max(yvar)) + 1,
+  # which(xvar == max(xvar))-1) or -2 or more, this should exclude the largest size classes in the sample from the regression
+
+  df.cc <- as.data.frame(cbind(xvar,yvar))
+  df.selec.cc <- df.cc[selection[1]:selection[2],]# creates a data frame with only the selected rows
+  df.selec.cc <- df.selec.cc[apply(df.selec.cc, 1,
+                                   function(row) all(row != 0)),]
+
+  df.selec.cc[is.finite(rowSums(df.selec.cc)),] # select only finite values
+  df.selec.cc[is.numeric(rowSums(df.selec.cc)),] # exclude NaN measurements
+
+  # some Infs and NaNs can pop up during the process when logarithms end up as imaginary or complex numbers
+
+  df.selec.cc <- subset(df.selec.cc, df.selec.cc$yvar > 1)
+
+  lm.cc <- lm(yvar ~ xvar,
+              data = df.selec.cc)
+
+  reg.output <- summary(lm.cc)
+  intercept.reg <- reg.output$coefficients[1]
+  slope.reg <- -reg.output$coefficients[2]
+  se.slope.reg <- reg.output$coefficients[4]
+
+  # bootstrap to obtain C.I.s for the total mortality
+
+  boot.Z <- NULL # empty object to store the Z replicates
+
+  for (i in 1:N_runs) {
+
+    resamp.df = df.selec.cc[sample(1:nrow(df.selec.cc),
+                                   nrow(df.selec.cc),
+                                   replace = TRUE),]
+
+    resamp.df <- resamp.df[apply(resamp.df, 1,
+                                 function(row) all(row != 0)),]
+    resamp.df[is.na(resamp.df) | resamp.df=="Inf"] <- NA
+    resamp.df[is.na(resamp.df) | resamp.df=="NaN"] <- NA
+
+    lm.boot <- lm(yvar ~ xvar,
+                  data = resamp.df,
+                  na.action = na.omit)
+
+    boot.Z <- c(boot.Z, lm.boot$coefficients[2])
+
+  }
+
+  Z <- median(-boot.Z)
+  Z.range <- range(-boot.Z)
+  Z.CI <- quantile(-boot.Z, probs = c(0.025, 0.975), na.rm = TRUE)
+  boot.Z <- as.vector(boot.Z)
+
+  output <- list(intercept.reg,
+                 Z, se.slope.reg,
+                 Z.CI, Z.range,
+                 as.vector(-boot.Z),
+                 df.selec.cc)
+  names(output) <- c("Intercept (a)", "Z",
+                     "Standard Error for Z",
+                     "Z bootstrapped 90% C.I.",
+                     "Range",
+                     "Z posterior distribution",
+                     "Regression input")
+
+  preds <- predict(lm.cc, pred.df = data.frame(x = df.selec.cc$xvar),
+                   interval = "confidence")
+
+  par(mfrow = c(1,1))
+
+  if (plot == TRUE) {
+
+    plot(yvar ~ xvar, xlab = "Relative age (days)",
+         ylab = "ln(Catch)/dt",
+         main = paste("Length-converted catch curve"),
+         cex.main = 0.8, ylim = c(plot.ylow.lim, plot.yup.lim),
+         xlim = c(plot.xlow.lim, plot.xup.lim))
+    mtext(paste("Median Z =", round(Z,3),
+                ", 95% C.I. =", round(Z.CI[1],3), "to", round(Z.CI[2],3)),
+          side = 3, cex = 0.7)
+    points(df.selec.cc$yvar ~ df.selec.cc$xvar, col = "black",
+           pch = 20)
+    abline(lm.cc)
+    lines(df.selec.cc$xvar, preds[,3], lty = "dashed")
+    lines(df.selec.cc$xvar, preds[,2], lty = "dashed")
+
+  }
+
+  return(output)
+
+}
+# end of function ---------------------------------------------------------------
+
+```
+
+\newpage
+
+Below are plots of the catch per size class for each species, and data seem suitable for estimating mortality through catch-curves. For the hardhead catfish, in particular, there appears to be two cohorts, which are going to be referred to as early and late juveniles. In fact, according to growth parameters extracted from Flinn et al (2019), those appear to be young-of-year and one year olds, respectively. Further estimation is gonna be executed separately for early and late juveniles.
+
+```{r echo=FALSE, fig.height=25, fig.width=21, message=FALSE, warning=FALSE}
+
+catch.ARIFEL <- rowSums(LFQ.ARIFEL$catch)
+catch.BAICHR <- rowSums(LFQ.BAICHR$catch)
+catch.CALSAP <- rowSums(LFQ.CALSAP$catch)
+catch.CYNARE <- rowSums(LFQ.CYNARE$catch)
+catch.CYNNEB <- rowSums(LFQ.CYNNEB$catch)
+catch.FUNGRA <- rowSums(LFQ.FUNGRA$catch)
+catch.LAGRHO <- rowSums(LFQ.LAGRHO$catch)
+catch.LITSET <- rowSums(LFQ.LITSET$catch)
+
+mids.ARIFEL <- LFQ.ARIFEL$midLengths
+mids.BAICHR <- LFQ.BAICHR$midLengths
+mids.CALSAP <- LFQ.CALSAP$midLengths
+mids.CYNARE <- LFQ.CYNARE$midLengths
+mids.CYNNEB <- LFQ.CYNNEB$midLengths
+mids.FUNGRA <- LFQ.FUNGRA$midLengths
+mids.LAGRHO <- LFQ.LAGRHO$midLengths
+mids.LITSET <- LFQ.LITSET$midLengths
+mids.LITSET <- (mids.LITSET*4.7808) + 5.847
+
+catch.df.ARIFEL <- data.frame(mids.ARIFEL, catch.ARIFEL)
+catch.df.BAICHR <- data.frame(mids.BAICHR, catch.BAICHR)
+catch.df.CALSAP <- data.frame(mids.CALSAP, catch.CALSAP)
+catch.df.CYNARE <- data.frame(mids.CYNARE, catch.CYNARE)
+catch.df.CYNNEB <- data.frame(mids.CYNNEB, catch.CYNNEB)
+catch.df.FUNGRA <- data.frame(mids.FUNGRA, catch.FUNGRA)
+catch.df.LAGRHO <- data.frame(mids.LAGRHO, catch.LAGRHO)
+catch.df.LITSET <- data.frame(mids.LITSET, catch.LITSET)
+catch.df.ARIFEL.EJ <- filter(catch.df.ARIFEL, catch.df.ARIFEL$mids.ARIFEL < 100)
+catch.df.ARIFEL.EJ <- filter(catch.df.ARIFEL.EJ, catch.df.ARIFEL.EJ$catch.ARIFEL < 50)
+catch.df.ARIFEL.LJ <- filter(catch.df.ARIFEL, catch.df.ARIFEL$mids.ARIFEL > 100)
+
+par(mfrow = c(4,2),mgp=c(2.7,1,0),mar=c(4, 5, 5, 4),oma=c(1.5,1.5,0,0))
+
+plot(catch.df.ARIFEL$catch.ARIFEL ~ catch.df.ARIFEL$mids.ARIFEL, xlab = "Midlength (mm)", ylab = "Catch", main = "Hardhead catfish", ylim = c(0,15), cex.sub = 2, cex.lab = 2, cex.main = 2.2, cex.axis = 2)
+plot(catch.df.BAICHR$catch.BAICHR ~ catch.df.BAICHR$mids.BAICHR, xlab = "Midlength (mm)", ylab = "Catch", main = "Silver perch", xlim = c(20,110), cex.sub = 2, cex.lab = 2, cex.main = 2.2, cex.axis = 2)
+plot(catch.df.CALSAP$catch.CALSAP ~ catch.df.CALSAP$mids.CALSAP, xlab = "Midlength (mm)", ylab = "Catch", main = "Blue crab", xlim = c(0,30), cex.sub = 2, cex.lab = 2, cex.main = 2.2, cex.axis = 2)
+plot(catch.df.CYNARE$catch.CYNARE ~ catch.df.CYNARE$mids.CYNARE, xlab = "Midlength (mm)", ylab = "Catch", main = "White trout", xlim = c(25,70), cex.sub = 2, cex.lab = 2, cex.main = 2.2, cex.axis = 2)
+plot(catch.df.CYNNEB$catch.CYNNEB ~ catch.df.CYNNEB$mids.CYNNEB, xlab = "Midlength (mm)", ylab = "Catch", main = "Spotted seatrout", xlim = c(25,120), cex.sub = 2, cex.lab = 2, cex.main = 2.2, cex.axis = 2)
+plot(catch.df.FUNGRA$catch.FUNGRA ~ catch.df.FUNGRA$mids.FUNGRA, xlab = "Midlength (mm)", ylab = "Catch", main = "Gulf killifish", xlim = c(35,66), cex.sub = 2, cex.lab = 2, cex.main = 2.2, cex.axis = 2)
+plot(catch.df.LAGRHO$catch.LAGRHO ~ catch.df.LAGRHO$mids.LAGRHO, xlab = "Midlength (mm)", ylab = "Catch", main = "Pinfish", xlim = c(35,155), cex.sub = 2, cex.lab = 2, cex.main = 2.2, cex.axis = 2)
+plot(catch.df.LITSET$catch.LITSET ~ catch.df.LITSET$mids.LITSET, xlab = "Midlength (mm)", ylab = "Catch", main = "White shrimp", cex.sub = 2, cex.lab = 2, cex.main = 2.2, cex.axis = 2)
+mtext("Fig. 2. Catch composition of juvenile nekton sampled at Point aux Pins Peninsula, Northern Gulf of Mexico",side=1,line=0,outer=TRUE,cex=1.5,las=0)
+
+```
+
+## Catch-curves
+
+### Hardhead catfish (late juveniles)
+```{r,echo=FALSE, message=FALSE, warning=FALSE}
+cc.ARIFEL.LJ <- iLCCC(mids = catch.df.ARIFEL.LJ$mids.ARIFEL, catch = catch.df.ARIFEL.LJ$catch.ARIFEL, K = 0.25/365, Linf = 410, t0 = FALSE, binsize = 0.1, N_runs = 1000, plot = TRUE, ex.points = 50, plot.yup.lim = 2.8, plot.ylow.lim = 1, plot.xlow.lim = 510, plot.xup.lim = 900)
+```
+
+
+### Silver perch
+```{r,echo=FALSE, message=FALSE, warning=FALSE}
+cc.BAICHR <- iLCCC(mids = catch.df.BAICHR$mids.BAICHR, catch = catch.df.BAICHR$catch.BAICHR, K = 0.11/30, Linf = 145, t0 = FALSE, binsize = 2, N_runs = 1000, plot = TRUE, ex.points = 10, plot.yup.lim = 3, plot.ylow.lim = 0, plot.xlow.lim = 50, plot.xup.lim = 240)
+```
+
+
+### Blue crab
+```{r,echo=FALSE, message=FALSE, warning=FALSE}
+cc.CALSAP <- iLCCC_abgrowth(mids = catch.df.CALSAP$mids.CALSAP,
+                                     catch = catch.df.CALSAP$catch.CALSAP,
+                                     GR = 0.513, t0 = FALSE, plot = TRUE,
+                                     N_runs = 1000, ex.points = 75, plot.xlow.lim = 0, plot.xup.lim = 70, plot.ylow.lim = 0.9, plot.yup.lim = 3.5)
+```
+
+
+### White trout
+```{r,echo=FALSE, message=FALSE, warning=FALSE}
+cc.CYNARE <- iLCCC(mids = catch.df.CYNARE$mids.CYNARE, catch = catch.df.CYNARE$catch.CYNARE, K = 0.325/365, Linf = 336.85, t0 = FALSE, binsize = 0.1, N_runs = 1000, plot = TRUE, ex.points = 1, plot.xlow.lim = 100, plot.xup.lim = 275)
+```
+
+
+### Spotted seatrout
+```{r,echo=FALSE, message=FALSE, warning=FALSE}
+cc.CYNNEB <- iLCCC_abgrowth(mids = catch.df.CYNNEB$mids.CYNNEB, catch = catch.df.CYNNEB$catch.CYNNEB, GR = 0.61, t0 = FALSE, binsize = 2, N_runs = 1000, plot = TRUE, ex.points = 105, plot.xlow.lim = 50, plot.xup.lim = 155, plot.ylow.lim = 1.5, plot.yup.lim = 3.5)
+```
+
+
+### Gulf killifish
+```{r,echo=FALSE, message=FALSE, warning=FALSE}
+cc.FUNGRA <- iLCCC(mids = catch.df.FUNGRA$mids.FUNGRA, catch = catch.df.FUNGRA$catch.FUNGRA, K = 2.43/365, Linf = 87.27, t0 = -0.022, binsize = 0.1, N_runs = 1000, plot = TRUE, ex.points = 3, plot.yup.lim = 4, plot.ylow.lim = 2, plot.xlow.lim = 60, plot.xup.lim = 190)
+```
+
+
+### Pinfish
+```{r,echo=FALSE, message=FALSE, warning=FALSE}
+cc.LAGRHO <- iLCCC_abgrowth(mids = catch.df.LAGRHO$mids.LAGRHO,
+                                     catch = catch.df.LAGRHO$catch.LAGRHO,
+                                     GR = 1.35, t0 = FALSE, plot = TRUE,
+                                     N_runs = 1000, ex.points = 0, plot.ylow.lim = 1, plot.yup.lim = 3.5)
+```
+
+
+### White shrimp
+```{r,echo=FALSE, message=FALSE, warning=FALSE}
+cc.LITSET <- iLCCC_abgrowth(mids = mids.LITSET,
+                                     catch = catch.df.LITSET$catch.LITSET,
+                                     GR = 0.815, t0 = FALSE, plot = TRUE,
+                                     N_runs = 1000, ex.points = 11, plot.xlow.lim = 30, plot.xup.lim = 120, plot.ylow.lim = 3.75, plot.yup.lim = 5.5)
+```
+\newpage
+
+
+## Estimating mortality with size composition
+
+A modified version of the Baranov catch equation in its continuous formulation will essentially estimate a snapshot of the "true" underlying population modified by selectivity when fishing mortality is negligible (Branch, 2009) (Figure 26):
+
+$$C_{a,t} = S_{a}N_{a-1,t-1}e^{-M}$$
+
+
+$$N_{a,t} = N_{a-1,t-1}e^{-M}$$
+
+
+```{r fig.height=8, fig.width=14, message=FALSE, warning=FALSE, echo = FALSE}
+
+a <- seq(1,15,1)
+M <- 0.05
+N <- rep(NA, length(a))
+
+for (i in 2:length(N)) {
+  
+  N[1] <- 1
+  N[i] <- N[i-1]*exp(-M*a[i])
+  
+}
+
+catch <- c(4,10,12,21,23,33,31,27,21,19,12,8,6,3,1) 
+selec <- cumsum(catch)/sum(catch)
+vuln <- selec*N 
+
+
+plot(N ~ a, type = "l", col = "black", lwd = 2, lty = 1, xlab = "Age class",ylab = "Proportion",
+     sub = "Fig. 3. Schematic representation of how survival (numbers-at-age) and selectivity functions interact to create the predicted catch composition.",
+     cex.sub = 1.1, cex.axis = 1.2)
+lines(vuln ~ a, lwd = 2, lty = 2, col = "red")
+lines(selec ~ a, lwd = 2, lty = 3, col = "blue")
+segments(0, 0.5 ,6.4 ,0.5, lty = 5)
+segments(6.4, 0 ,6.4 ,0.5, lty = 5)
+legend("right",legend=c("Numbers-at-age", "Catch", "Selectivity", "Age at 50% selection"),
+       col=c("black", "red", "blue", "black"), lty=1:2:3:5, cex=0.9)
+
+```
+
+I have wrote a Bayesian model to estimate mortality rates using the predicted age composition of the catch after accounting for selectivity. The benefit of this method over the catch curve is that it uses all data points rather than just the fully-selected sizes/ages, and therefore can potentially improve model fit. A disadvantage of this model is that mortality is always confounded with migrations out of the study area, specially when dealing with juvenile fish exhibiting ontogenetic shifts in habitat use. Although one option to tackle this would be using dome-shaped selectivity with decreasing probabiliy of selection for older size classes (e.g. double logistic, double normal), parameter estimation for those models is difficult for the same reason: selectivity is confounded with mortality. I have chosen to estimate logistic selection for the sake of simplicity. Results corresponding for ths method can be found on Figure 4 and Table 2.
+
+
+
+```{r,include=TRUE, message=FALSE, warning=FALSE, echo=FALSE}
+
+#-------------------------------------------------------------------------------
+#                     SPACE FOR MODEL SPECIFICATIONS
+#-------------------------------------------------------------------------------
+require(rjags)
+require(R2jags)
+require(runjags)
+#------------------------------ HARDHEAD CATFISH -------------------------------
+
+modelString_ARIFEL <- '
+
+model{
+
+# ><(((º> ><(((º> ><(((º> ><(((º>
+#   PRIOR DISTRIBUTIONS   ><(((º>
+# ><(((º> ><(((º> ><(((º> ><(((º>
+
+M ~ dnorm(0.01,0.001) # prior on mortality ><(((*>
+s ~ dnorm(0.5,0.001) # slope
+a50 ~ dnorm(150, 0.001) # age at 50% selectivity
+sigma_S ~ dunif(0,100) # SD
+sigma_C ~ dunif(0,100)
+tau_S <- 1/(sigma_S * sigma_S) # precision is the inverse of variance
+tau_C <- 1/(sigma_C * sigma_C)
+
+# PRIORS FOR GROWTH PARAMETERS ><((º> ><((((º> ><((((((º>
+
+sigma_k <- 0.023
+tau_k <- 1/(sigma_k * sigma_k)
+k ~ dnorm(0.25, tau_k)
+
+sigma_Linf <- 2.81
+tau_Linf <- 1/(sigma_Linf * sigma_Linf)
+Linf ~ dnorm(410, tau_Linf)
+
+# ESTIMATING RELATIVE AGE
+
+for (j in 1:N) {
+
+rel.age[j] <- -(1/k*365) * log(1 - L[j]/Linf) 
+
+}
+
+# SURVIVAL-AT-AGE
+
+for (t in 1:N) {
+
+Nb[t] <- exp(- M * rel.age[t]) # predict numbers-at-age
+
+}
+
+# ><(((º> ><(((º> ><(((º> ><(((º>
+#   LIKELIHOOD FUNCTIONS  ><(((º> 
+# ><(((º> ><(((º> ><(((º> ><(((º>
+
+for (i in 1:N) {
+
+S[i] ~ dnorm(muS[i], tau_S)
+muS[i] <- 1/(1 + exp(-s*(rel.age[i] - a50))) # logistic selectivity ogive
+
+}
+
+for (a in 1:N) {
+
+catch[a] ~ dnorm(pred_catch[a], tau_C)
+pred_catch[a] <- S[a] * Nb[a]
+
+}
+
+}
+'
+writeLines(modelString_ARIFEL, "model.jags.ARIFEL")
+
+
+#----------------------------- SILVER PERCH ------------------------------------
+
+modelString_BAICHR <- '
+
+model{
+
+# ><(((º> ><(((º> ><(((º> ><(((º>
+#   PRIOR DISTRIBUTIONS   ><(((º>
+# ><(((º> ><(((º> ><(((º> ><(((º>
+
+M ~ dnorm(0.02,0.1) T(0,1) # prior on mortality ><(((*>
+sigma_C ~ dunif(0,100)
+tau_C <- pow(sigma_C,-2)
+
+# PRIORS FOR GROWTH PARAMETERS ><((º> ><((((º> ><((((((º>
+
+sigma_k <- 0.001
+tau_k <- 1/(sigma_k * sigma_k)
+k ~ dnorm(1.32, tau_k)
+
+sigma_Linf <- 1
+tau_Linf <- 1/(sigma_Linf * sigma_Linf)
+Linf ~ dnorm(116, tau_Linf)
+
+# ESTIMATING RELATIVE AGE
+
+for (j in 1:N) {
+
+rel.age[j] <- -(1/(k/365)) * log(1 - L[j]/Linf) 
+
+}
+
+# ESTIMATING SELECTIVITY
+
+sigma_S ~ dunif(0,100)
+tau_S <- pow(sigma_S,-2)
+a50 ~ dnorm(115.061, 10)
+s ~ dnorm(0.12, 1000)
+
+for (i in 1:N) {
+
+S[i] ~ dnorm(mu_S[i], tau_S) T(0,1)
+mu_S[i] <- 1/(1 + exp(-s*(rel.age[i] - a50))) # logistic selectivity ogive
+
+}
+
+
+# ><(((º> ><(((º> ><(((º> ><(((º>
+#   LIKELIHOOD FUNCTIONS  ><(((º> 
+# ><(((º> ><(((º> ><(((º> ><(((º>
+
+for (a in 1:N) {
+
+catch[a] ~ dnorm(pred_catch[a], tau_C)
+pred_catch[a] <- S[a] * exp(-M*rel.age[a])
+
+}
+
+}
+'
+writeLines(modelString_BAICHR, "model.jags.BAICHR")
+
+#-------------------------------- BLUE CRAB ------------------------------------
+
+modelString_CALSAP <- '
+
+model{
+
+# ><(((º> ><(((º> ><(((º> ><(((º>
+#   PRIOR DISTRIBUTIONS   ><(((º>
+# ><(((º> ><(((º> ><(((º> ><(((º>
+
+M ~ dnorm(0.055,0.001) # prior on mortality ><(((*>
+sigma_C ~ dunif(0,100)
+tau_C <- 1/(sigma_C * sigma_C)
+
+# PRIORS FOR GROWTH PARAMETERS ><((º> ><(((((º> ><((((((º>
+
+sigma_GR <- 0.03
+tau_GR <- 1/(sigma_GR * sigma_GR)
+GR ~ dnorm(0.513, tau_GR)
+
+# ESTIMATING RELATIVE AGE
+
+for (j in 1:N) {
+
+rel.age[j] <- L[j]/GR
+
+}
+
+# ESTIMATING SELECTIVITY
+
+s ~ dnorm(0.2,100) # slope
+a50 ~ dnorm(25, 100) # age at 50% selectivity
+sigma_S ~ dunif(0,1) # SD
+tau_S <- pow(sigma_S,-2)
+
+for (i in 1:N) {
+
+S[i] ~ dnorm(mu_S[i], tau_S)
+mu_S[i] <- 1/(1 + exp(-s*(rel.age[i] - a50))) # logistic selectivity ogive
+
+}
+
+# ><((Âº> ><((Âº> ><((Âº> ><((Âº>
+#  LIKELIHOOD FUNCTION ><((Âº> 
+# ><((Âº> ><((Âº> ><((Âº> ><((Âº>
+
+for (a in 1:N) {
+
+catch[a] ~ dnorm(pred_catch[a], tau_C)
+pred_catch[a] <- mu_S[a] * exp(- M * rel.age[a])
+
+}
+
+}
+'
+writeLines(modelString_CALSAP, "model.jags.CALSAP")
+
+
+#------------------------------ WHITE TROUT ------------------------------------
+
+modelString_CYNARE <- '
+
+model{
+
+# ><(((º> ><(((º> ><(((º> ><(((º>
+#   PRIOR DISTRIBUTIONS   ><(((º>
+# ><(((º> ><(((º> ><(((º> ><(((º>
+
+M ~ dnorm(0.026,100) # prior on mortality ><(((*>
+sigma_C ~ dunif(0,100)
+tau_C <- 1/(sigma_C * sigma_C)
+
+# PRIORS FOR GROWTH PARAMETERS ><((º> ><((((º> ><((((((º>
+
+sigma_k <- 0.065
+tau_k <- 1/(sigma_k * sigma_k)
+k ~ dnorm(0.325, tau_k)
+
+sigma_Linf <- 6
+tau_Linf <- 1/(sigma_Linf * sigma_Linf)
+Linf ~ dnorm(336.85, tau_Linf)
+
+# ESTIMATING RELATIVE AGE
+
+for (j in 1:N) {
+
+rel.age[j] <- -(1/k*365) * log(1 - L[j]/Linf) 
+
+}
+
+# SELECTIVITY
+
+s ~ dnorm(0.2,1000) # slope
+a50 ~ dnorm(120, 1000) # age at 50% selectivity
+sigma_S ~ dunif(0,100) # SD
+tau_S <- 1/(sigma_S * sigma_S)
+
+for (i in 1:N) {
+
+S[i] ~ dnorm(muS[i], tau_S)
+muS[i] <- 1/(1 + exp(-s*(rel.age[i] - a50))) # logistic selectivity ogive
+
+}
+
+# ><(((º> ><(((º> ><(((º> ><(((º>
+#   LIKELIHOOD FUNCTION   ><(((º> 
+# ><(((º> ><(((º> ><(((º> ><(((º>
+
+for (a in 1:N) {
+
+catch[a] ~ dnorm(pred_catch[a], tau_C)
+pred_catch[a] <- S[a] * exp( -M *rel.age[a])
+
+}
+
+}
+'
+writeLines(modelString_CYNARE, "model.jags.CYNARE")
+
+
+#------------------------- SPOTTED SEATROUT ------------------------------------
+
+
+modelString_CYNNEB <- '
+
+model{
+
+# ><(((º> ><(((º> ><(((º> ><(((º>
+#   PRIOR DISTRIBUTIONS   ><(((º>
+# ><(((º> ><(((º> ><(((º> ><(((º>
+
+M ~ dnorm(0.01,0.001) # prior on mortality ><(((*>
+sigma_C ~ dunif(0,100)
+tau_C <- 1/(sigma_C * sigma_C)
+
+# PRIORS FOR GROWTH PARAMETERS ><((º> ><((((º> ><((((((º>
+
+sigma_k <- 0.07
+tau_k <- 1/(sigma_k * sigma_k)
+k ~ dnorm(0.36, tau_k)
+
+sigma_Linf <- 40
+tau_Linf <- 1/(sigma_Linf * sigma_Linf)
+Linf ~ dnorm(597.5, tau_Linf)
+
+# ESTIMATING RELATIVE AGE
+
+for (j in 1:N) {
+
+rel.age[j] <- -(1/(k/365)) * log(1 - L[j]/Linf) 
+
+}
+
+# SELECTIVITY
+
+s ~ dnorm(0.32,10000) # slope
+a50 ~ dnorm(60, 1000) # age at 50% selectivity
+sigma_S ~ dunif(0,100) # SD
+tau_S <- 1/(sigma_S * sigma_S) # precision is the inverse of variance
+
+for (i in 1:N) {
+
+S[i] ~ dnorm(mu_S[i], tau_S) T(0,1)
+mu_S[i] <- 1/(1 + exp(-s*(rel.age[i] - a50))) # logistic selectivity ogive
+
+}
+
+
+# ><(((º> ><(((º> ><(((º> ><(((º>
+#   LIKELIHOOD FUNCTION   ><(((º> 
+# ><(((º> ><(((º> ><(((º> ><(((º>
+
+for (a in 1:N) {
+
+catch[a] ~ dnorm(pred_catch[a], tau_C)
+pred_catch[a] <- mu_S[a] * exp( -M *rel.age[a])
+
+}
+
+}
+'
+writeLines(modelString_CYNNEB, "model.jags.CYNNEB")
+
+
+#---------------------------------- PINFISH ------------------------------------
+
+
+modelString_LAGRHO <- '
+
+model{
+
+# ><(((º> ><(((º> ><(((º> ><(((º>
+#   PRIOR DISTRIBUTIONS   ><(((º>
+# ><(((º> ><(((º> ><(((º> ><(((º>
+
+M ~ dnorm(0.01,0.001) # prior on mortality ><(((*>
+s ~ dnorm(0.5,0.001) # slope
+a50 ~ dnorm(20, 0.001) # age at 50% selectivity
+sigma_S ~ dunif(0,100) # SD
+sigma_C ~ dunif(0,100)
+tau_S <- 1/(sigma_S * sigma_S) # precision is the inverse of variance
+tau_C <- 1/(sigma_C * sigma_C)
+
+# PRIORS FOR GROWTH PARAMETERS ><((º> ><(((((º> ><((((((º>
+
+sigma_GR <- 0.07
+tau_GR <- 1/(sigma_GR * sigma_GR)
+GR ~ dnorm(0.54, tau_GR)
+
+# ESTIMATING RELATIVE AGE
+
+for (j in 1:N) {
+
+rel.age[j] <- L[j]/GR
+
+}
+
+# SURVIVAL-AT-AGE
+
+for (t in 1:N) {
+
+Nb[t] <- exp(- M * rel.age[t]) # predict numbers-at-age
+
+}
+
+# ><((Âº> ><((Âº> ><((Âº> ><((Âº>
+#  LIKELIHOOD FUNCTION ><((Âº> 
+# ><((Âº> ><((Âº> ><((Âº> ><((Âº>
+
+for (i in 1:N) {
+
+S[i] ~ dnorm(muS[i], tau_S)
+muS[i] <- 1/(1 + exp(-s*(rel.age[i] - a50))) # logistic selectivity ogive
+
+}
+
+for (a in 1:N) {
+
+catch[a] ~ dnorm(pred_catch[a], tau_C)
+pred_catch[a] <- S[a] * Nb[a] 
+
+}
+
+}
+'
+writeLines(modelString_LAGRHO, "model.jags.LAGRHO")
+
+#---------------------------------- KILLIFISH ------------------------------------
+
+modelString_FUNGRA <- '
+
+model{
+
+# ><(((º> ><(((º> ><(((º> ><(((º>
+#   PRIOR DISTRIBUTIONS   ><(((º>
+# ><(((º> ><(((º> ><(((º> ><(((º>
+
+M ~ dnorm(5,0.001) # prior on mortality ><(((*>
+sigma_C ~ dunif(0,100)
+tau_C <- 1/(sigma_C * sigma_C)
+
+# PRIORS FOR GROWTH PARAMETERS ><((º> ><((((º> ><((((((º>
+
+sigma_k <- 0.05
+tau_k <- 1/(sigma_k * sigma_k)
+k ~ dnorm(2.43, tau_k)
+
+sigma_Linf <- 0.01
+tau_Linf <- 1/(sigma_Linf * sigma_Linf)
+Linf ~ dnorm(87.27, tau_Linf)
+
+# ESTIMATING RELATIVE AGE
+
+for (j in 1:N) {
+
+rel.age[j] <- -(1/(k/365)) * log(1 - L[j]/Linf) 
+
+}
+
+# SELECTIVITY
+
+s ~ dnorm(0.8,1000) # slope
+a50 ~ dnorm(97, 1000) # age at 50% selectivity
+sigma_S ~ dunif(0,100) # SD
+tau_S <- 1/(sigma_S * sigma_S)
+
+for (i in 1:N) {
+
+S[i] ~ dnorm(muS[i], tau_S)
+muS[i] <- 1/(1 + exp(-s*(rel.age[i] - a50))) # logistic selectivity ogive
+
+}
+
+# ><(((º> ><(((º> ><(((º> ><(((º>
+#   LIKELIHOOD FUNCTION   ><(((º> 
+# ><(((º> ><(((º> ><(((º> ><(((º>
+
+for (a in 1:N) {
+
+catch[a] ~ dnorm(pred_catch[a], tau_C)
+pred_catch[a] <- muS[a] * exp(- M * rel.age[a])
+
+}
+
+}
+'
+writeLines(modelString_FUNGRA, "model.jags.FUNGRA")
+
+
+#------------------------------- WHITE SHRIMP ----------------------------------
+
+modelString_LITSET <- '
+
+model{
+
+# ><((Âº> ><((Âº> ><((Âº> ><((Âº>
+#  PRIOR DISTRIBUTIONS ><((Âº>
+# ><((Âº> ><((Âº> ><((Âº> ><((Âº>
+
+M ~ dnorm(0.02,0.001) # prior on mortality ><((*>
+s ~ dnorm(0.1,0.001) # slope
+a50 ~ dnorm(56, 100) # age at 50% selectivity
+sigma_S ~ dunif(0,100) # SD for selectivity function
+
+chSq ~ dgamma(0.5,0.5)
+z ~ dnorm(0, 0.04)I(0,)
+
+sigma_C <- z/sqrt(chSq) # SD for relative catch
+tau_S <- 1/(sigma_S * sigma_S) # precision is the inverse of variance
+tau_C <- 1/ (sigma_C * sigma_C)
+
+GR ~ dnorm(0.84, 10)
+sigma_GR <- 0.01
+tau_GR <- 1/(sigma_GR * sigma_GR)
+
+for (j in 1:N) {
+
+rel.age[j] <- L[j]/GR
+
+}
+
+Nb[1] <- 1
+
+for (t in 2:N) {
+
+Nb[t] <- Nb[t-1]*exp(-M*rel.age[t]) # predict numbers-at-age
+
+}
+# ><((Âº> ><((Âº> ><((Âº> ><((Âº>
+#  LIKELIHOOD FUNCTION ><((Âº> 
+# ><((Âº> ><((Âº> ><((Âº> ><((Âº>
+
+for (i in 1:N) {
+
+S[i] ~ dnorm(muS[i], tau_S)
+muS[i] <- 1/(1 + exp(-s*(rel.age[i] - a50)))
+
+}
+
+for (a in 2:N) {
+
+catch[a] ~ dnorm(pred_catch[a], tau_C)
+pred_catch[a] <- S[a] * Nb[a-1]
+
+}
+
+}
+'
+writeLines(modelString_LITSET, "model.jags.LITSET")
+
+```
+
+
+```{r,include=TRUE, message=FALSE, warning=FALSE, echo=FALSE}
+
+#-------------------------------------------------------------------------------
+#                             ORGANIZING DATA
+#-------------------------------------------------------------------------------
+
+# HARDHEAD
+L.ARIFEL <- catch.df.ARIFEL.LJ$mids.ARIFEL
+catch.ARIFEL <- catch.df.ARIFEL.LJ$catch.ARIFEL/sum(catch.df.ARIFEL.LJ$catch.ARIFEL)
+S.ARIFEL <- cumsum(catch.ARIFEL)
+N.ARIFEL <- length(catch.ARIFEL)
+
+jags.data.ARIFEL.LJ <- list(S = S.ARIFEL, L = L.ARIFEL,
+                            catch = catch.ARIFEL, N = N.ARIFEL)
+
+# SILVER PERCH
+
+catch.df.BAICHR <- catch.df.BAICHR %>%
+  filter(catch.df.BAICHR$mids.BAICHR < 116)
+catch.df.BAICHR <- catch.df.BAICHR %>%
+  filter(catch.df.BAICHR$catch.BAICHR > 0)
+
+L.BAICHR <- catch.df.BAICHR$mids.BAICHR
+catch.BAICHR <- catch.df.BAICHR$catch.BAICHR/sum(catch.df.BAICHR$catch.BAICHR)
+S.BAICHR <- cumsum(catch.BAICHR)
+N.BAICHR <- length(L.BAICHR)
+
+jags.data.BAICHR <- list(N = N.BAICHR,
+                         catch = catch.BAICHR, L = L.BAICHR)
+
+# BLUE CRAB
+L.CALSAP <- catch.df.CALSAP$mids.CALSAP
+catch.CALSAP <- catch.df.CALSAP$catch.CALSAP/sum(catch.df.CALSAP$catch.CALSAP)
+N.CALSAP <- length(L.CALSAP)
+
+jags.data.CALSAP <- list(N = N.CALSAP,
+                         catch = catch.CALSAP, L = L.CALSAP)
+
+# WHITE TROUT
+L.CYNARE <- catch.df.CYNARE$mids.CYNARE
+catch.CYNARE <- catch.df.CYNARE$catch.CYNARE/sum(catch.df.CYNARE$catch.CYNARE)
+S.CYNARE <- cumsum(catch.CYNARE)
+N.CYNARE <- length(catch.CYNARE)
+
+jags.data.CYNARE <- list(N=N.CYNARE,catch=catch.CYNARE,L=L.CYNARE)
+
+# SPOTTED SEATROUT
+L.CYNNEB <- catch.df.CYNNEB$mids.CYNNEB
+catch.CYNNEB <- catch.df.CYNNEB$catch.CYNNEB/sum(catch.df.CYNNEB$catch.CYNNEB)
+S.CYNNEB <- cumsum(catch.CYNNEB)
+N.CYNMEB <- length(catch.CYNNEB)
+
+df.CYNNEB <- data.frame(L.CYNNEB, catch.CYNNEB, S.CYNNEB)
+
+df.CYNNEB <- filter(df.CYNNEB, L.CYNNEB < 110)
+
+jags.data.CYNNEB <- list(N = length(df.CYNNEB$L), catch = df.CYNNEB$catch, L = df.CYNNEB$L)
+
+# PINFISH
+L.LAGRHO <- catch.df.LAGRHO$mids.LAGRHO
+catch.LAGRHO <- catch.df.LAGRHO$catch.LAGRHO/sum(catch.df.LAGRHO$catch.LAGRHO)
+S.LAGRHO <- cumsum(catch.LAGRHO)
+N.LAGRHO <- length(catch.LAGRHO)
+
+jags.data.LAGRHO <- list(S = S.LAGRHO, N = N.LAGRHO,
+                         catch = catch.LAGRHO , L = L.LAGRHO)
+
+# KILLIFISH
+L.FUNGRA <- catch.df.FUNGRA$mids.FUNGRA
+catch.FUNGRA <- catch.df.FUNGRA$catch.FUNGRA/sum(catch.df.FUNGRA$catch.FUNGRA)
+S.FUNGRA <- cumsum(catch.FUNGRA)
+N.FUNGRA <- length(L.FUNGRA)
+
+df.FUNGRA <- data.frame(L.FUNGRA, catch.FUNGRA, S.FUNGRA, N.FUNGRA)
+df.FUNGRA <- filter(df.FUNGRA, L.FUNGRA > 23)
+
+jags.data.FUNGRA <- list(N = length(df.FUNGRA$L.FUNGRA),
+                         catch =  df.FUNGRA$catch.FUNGRA, L = df.FUNGRA$L.FUNGRA)
+
+# WHITE SHRIMP
+catch.LITSET <- catch.df.LITSET$catch.LITSET/sum(catch.df.LITSET$catch.LITSET)
+L.LITSET <- catch.df.LITSET$mids.LITSET
+S.LITSET <- cumsum(catch.LITSET)
+N.LITSET <- length(L.LITSET)
+
+
+jags.data.LITSET <- list(L=L.LITSET,S=S.LITSET,
+                         N=N.LITSET, catch = catch.LITSET)
+
+```
+
+
+```{r,include=FALSE, message=FALSE, warning=FALSE, echo=FALSE}
+#-------------------------------------------------------------------------------
+#                           RUNNING THE MODELS
+#-------------------------------------------------------------------------------
+
+# parameters to be estimated
+pars <- c("M", "pred_catch", "catch", "S","mu_S", "a50", "s", "rel.age")
+
+# MCMC settings
+ni <- 200000;nt <- 3;nb <- 5000;nc <- 3
+
+res.ARIFEL <- jags(jags.data.ARIFEL.LJ, inits = NULL, pars, "model.jags.ARIFEL", n.chains = nc, n.thin = nt, n.iter = ni, n.burnin = nb, working.directory = getwd())
+
+res.BAICHR <- R2jags::jags(jags.data.BAICHR, inits = NULL, pars, "model.jags.BAICHR", n.chains = nc, n.thin = nt, n.iter = ni, n.burnin = nb, working.directory = getwd())
+
+res.CALSAP <- R2jags::jags(jags.data.CALSAP, inits = NULL, pars, "model.jags.CALSAP", n.chains = nc, n.thin = nt, n.iter = ni, n.burnin = nb, working.directory = getwd())
+
+res.CYNARE <- R2jags::jags(jags.data.CYNARE, inits = NULL, pars, "model.jags.CYNARE", n.chains = nc, n.thin = nt, n.iter = ni, n.burnin = nb, working.directory = getwd())
+
+res.CYNNEB <- R2jags::jags(jags.data.CYNNEB, inits = NULL, pars, "model.jags.CYNNEB", n.chains = nc, n.thin = nt, n.iter = ni, n.burnin = nb, working.directory = getwd())
+
+res.LAGRHO <- R2jags::jags(jags.data.LAGRHO, inits = NULL, pars, "model.jags.LAGRHO", n.chains = nc, n.thin = nt, n.iter = ni, n.burnin = nb, working.directory = getwd())
+
+res.FUNGRA <- R2jags::jags(jags.data.FUNGRA, inits = NULL, pars, "model.jags.FUNGRA", n.chains = nc, n.thin = nt, n.iter = ni, n.burnin = nb, working.directory = getwd())
+
+res.LITSET <- R2jags::jags(jags.data.LITSET, inits = NULL, pars, "model.jags.LITSET", n.chains = nc, n.thin = nt, n.iter = ni, n.burnin = nb, working.directory = getwd())
+
+```
+
+
+```{r echo=FALSE, fig.height=15, fig.width=18, message=FALSE, warning=FALSE}
+#-------------------------------------------------------------------------------
+#                               PLOTTING
+#-------------------------------------------------------------------------------
+
+par(mfrow = c(4,2),mgp=c(2.7,1,0),mar=c(3,1.75,1.75,1.75),oma=c(1.5,1.5,0,0))
+
+plot(jags.data.ARIFEL.LJ$catch ~ res.ARIFEL$BUGSoutput$mean$rel.age, pch = 16, col = "black", cex = 1,
+     xlab = "Age (days)", ylab = "Relative catch", ylim = c(0,0.041),
+     main = "Hardhead catfish")
+lines(res.ARIFEL$BUGSoutput$mean$pred_catch ~ res.ARIFEL$BUGSoutput$mean$rel.age)
+lines(res.ARIFEL$BUGSoutput$median$pred_catch - 2*(res.ARIFEL$BUGSoutput$sd$pred_catch) ~ res.ARIFEL$BUGSoutput$mean$rel.age, lty = "dashed")
+lines(res.ARIFEL$BUGSoutput$median$pred_catch + 2*(res.ARIFEL$BUGSoutput$sd$pred_catch) ~ res.ARIFEL$BUGSoutput$mean$rel.age, lty = "dashed")
+legend("topright",legend=c("Mean", "95% C.I."),
+       col=c("black", "black"), lty=1:2, cex=1.5)
+
+plot(jags.data.BAICHR$catch ~ res.BAICHR$BUGSoutput$mean$rel.age, pch = 16, col = "black", cex = 1,
+     xlab = "Age (days)", ylab = "Relative catch", 
+     main = "Silver perch")
+lines(res.BAICHR$BUGSoutput$mean$pred_catch ~ res.BAICHR$BUGSoutput$mean$rel.age)
+lines(res.BAICHR$BUGSoutput$median$pred_catch - 3*(res.BAICHR$BUGSoutput$sd$pred_catch) ~ res.BAICHR$BUGSoutput$mean$rel.age, lty = "dashed")
+lines(res.BAICHR$BUGSoutput$median$pred_catch + 3*(res.BAICHR$BUGSoutput$sd$pred_catch) ~ res.BAICHR$BUGSoutput$mean$rel.age, lty = "dashed")
+legend("topright",legend=c("Mean", "95% C.I."),
+       col=c("black", "black"), lty=1:2, cex=1.5)
+
+plot(jags.data.CALSAP$catch ~ res.CALSAP$BUGSoutput$mean$rel.age, pch = 16, col = "black", cex = 1,
+     xlab = "Age (days)", ylab = "Relative catch", xlim = c(0,110),
+     main = "Juvenile blue crab")
+lines(res.CALSAP$BUGSoutput$median$pred_catch ~ res.CALSAP$BUGSoutput$mean$rel.age)
+lines(res.CALSAP$BUGSoutput$median$pred_catch - 2*(res.CALSAP$BUGSoutput$sd$pred_catch) ~ res.CALSAP$BUGSoutput$mean$rel.age, lty = "dashed")
+lines(res.CALSAP$BUGSoutput$median$pred_catch + 2*(res.CALSAP$BUGSoutput$sd$pred_catch) ~ res.CALSAP$BUGSoutput$mean$rel.age, lty = "dashed")
+legend("topright",legend=c("Mean", "95% C.I."),
+       col=c("black", "black"), lty=1:2, cex=1.5)
+
+plot(jags.data.CYNARE$catch ~ res.CYNARE$BUGSoutput$mean$rel.age, pch = 16, col = "black", cex = 1,
+     xlab = "Age (days)", ylab = "Relative catch", 
+     main = "White trout")
+lines(res.CYNARE$BUGSoutput$mean$pred_catch ~ res.CYNARE$BUGSoutput$mean$rel.age)
+lines(res.CYNARE$BUGSoutput$median$pred_catch - 2*(res.CYNARE$BUGSoutput$sd$pred_catch) ~ res.CYNARE$BUGSoutput$mean$rel.age, lty = "dashed")
+lines(res.CYNARE$BUGSoutput$median$pred_catch + 2*(res.CYNARE$BUGSoutput$sd$pred_catch) ~ res.CYNARE$BUGSoutput$mean$rel.age, lty = "dashed")
+legend("topright",legend=c("Mean", "95% C.I."),
+       col=c("black", "black"), lty=1:2, cex=1.5)
+
+plot(df.CYNNEB$catch ~ res.CYNNEB$BUGSoutput$mean$rel.age, pch = 16, col = "black", cex = 1,
+     xlab = "Age (days)", ylab = "Relative catch", 
+     main = "Spotted seatrout")
+lines(res.CYNNEB$BUGSoutput$mean$pred_catch ~ res.CYNNEB$BUGSoutput$mean$rel.age)
+lines(res.CYNNEB$BUGSoutput$median$pred_catch - 2.5*(res.CYNNEB$BUGSoutput$sd$pred_catch) ~ res.CYNNEB$BUGSoutput$mean$rel.age, lty = "dashed")
+lines(res.CYNNEB$BUGSoutput$median$pred_catch + 2.5*(res.CYNNEB$BUGSoutput$sd$pred_catch) ~ res.CYNNEB$BUGSoutput$mean$rel.age, lty = "dashed")
+legend("topright",legend=c("Mean", "95% C.I."),
+       col=c("black", "black"), lty=1:2, cex=1.5)
+
+plot(jags.data.LAGRHO$catch ~ res.LAGRHO$BUGSoutput$mean$rel.age, ylim = c(0,0.05), pch = 16, col = "black", cex = 1,
+     xlab = "Age (days)", ylab = "Relative catch", 
+     main = "Juvenile pinfish")
+lines(res.LAGRHO$BUGSoutput$median$pred_catch ~ res.LAGRHO$BUGSoutput$mean$rel.age)
+lines(res.LAGRHO$BUGSoutput$median$pred_catch - 3*(res.LAGRHO$BUGSoutput$sd$pred_catch) ~ res.LAGRHO$BUGSoutput$mean$rel.age, lty = "dashed")
+lines(res.LAGRHO$BUGSoutput$median$pred_catch + 3*(res.LAGRHO$BUGSoutput$sd$pred_catch) ~ res.LAGRHO$BUGSoutput$mean$rel.age, lty = "dashed")
+legend("topright",legend=c("Mean", "95% C.I."),
+       col=c("black", "black"), lty=1:2, cex=1.5)
+
+plot(jags.data.FUNGRA$catch ~ res.FUNGRA$BUGSoutput$mean$rel.age, pch = 16, col = "black", cex = 1,
+     xlab = "Age (days)", ylab = "Relative catch", 
+     main = "Killifish")
+lines(res.FUNGRA$BUGSoutput$mean$pred_catch ~ res.FUNGRA$BUGSoutput$mean$rel.age)
+lines(res.FUNGRA$BUGSoutput$median$pred_catch - 2*(res.FUNGRA$BUGSoutput$sd$pred_catch) ~ res.FUNGRA$BUGSoutput$mean$rel.age, lty = "dashed")
+lines(res.FUNGRA$BUGSoutput$median$pred_catch + 2*(res.FUNGRA$BUGSoutput$sd$pred_catch) ~ res.FUNGRA$BUGSoutput$mean$rel.age, lty = "dashed")
+legend("topright",legend=c("Mean", "95% C.I."),
+       col=c("black", "black"), lty=1:2, cex=1.5)
+
+plot(jags.data.LITSET$catch ~ res.LITSET$BUGSoutput$mean$rel.age, ylim = c(0,0.16), pch = 16, col = "black", cex = 1,
+     xlab = "Age (days)", ylab = "Relative catch", 
+     main = "Juvenile white shrimp")
+lines(res.LITSET$BUGSoutput$median$pred_catch ~ res.LITSET$BUGSoutput$mean$rel.age[2:27])
+lines(res.LITSET$BUGSoutput$median$pred_catch - 2*(res.LITSET$BUGSoutput$sd$pred_catch) ~ res.LITSET$BUGSoutput$mean$rel.age[2:27], lty = "dashed")
+lines(res.LITSET$BUGSoutput$median$pred_catch + 2*(res.LITSET$BUGSoutput$sd$pred_catch) ~ res.LITSET$BUGSoutput$mean$rel.age[2:27], lty = "dashed")
+legend("topright",legend=c("Mean", "95% C.I."),
+       col=c("black", "black"), lty=1:2, cex=1.5)
+mtext("Fig. 4. Model fits to age composition",side=1,line=0,outer=TRUE,cex=1.5)
+
+
+```
+
+
+
+#### Table 2. Posterior distributions (means and 95 % C.I.s) of mortality estimates for the study species across methods.
+
+| Species                 | Catch curve           | Catch composition       | 
+|-------------------------|-----------------------|-------------------------|
+| _Arius felis_           | 0.006 (0.003 - 0.011) | 0.0048 (0.004 - 0.0055) |
+| _Bairdiella chrysoura_  | 0.022 (0.019 - 0.024) | 0.036 (0.032 - 0.042)   |
+| _Callinectes sapidus_   | 0.066 (0.018 - 0.103) | 0.054 (0.048 - 0.062)   |
+| _Cynoscion arenarius_   | 0.028 (0.008 - 0.036) | 0.026 (0.022 - 0.029)   |
+| _Cynoscion nebulosus_   | 0.031 (0.025 - 0.041) | 0.016 (0.0125 - 0.019)  | 
+| _Fundulus grandis_      | 0.024 (0.016 - 0.026) | 0.018 (0.015 - 0.022)   | 
+| _Lagodon rhomboides_    | 0.02 (0.013 - 0.026)  | 0.21 (0.018 - 0.024)    |
+| _Litopeaneus setiferus_ | 0.028 (0.025 - 0.03)  | 0.018 (0.017 - 0.02)    | 
+
+## References
+
+Baker, R., & Minello, T. J. (2010). Growth and mortality of juvenile white shrimp Litopenaeus setiferus in a marsh pond. Marine Ecology Progress Series, 413, 95-104.
+
+Bohaboy, E. C., Patterson III, W. F., & Mareska, J. (2018). Stock assessment of Spotted Seatrout (Cynoscion nebulosus, Sciaenidae) in Alabama. University of Florida, Gainesville and Alabama Department of Conservation and Natural Resources, Marine Resource Division, Dauphin Island.
+
+Branch, T. A. (2009). Differences in predicted catch composition between two widely used catch equation formulations. Canadian Journal of Fisheries and Aquatic Sciences, 66(1), 126-132.
+
+de Barros, M. (2023). iLCCC. RPubs. Available at https://rpubs.com/matheusdebarros/1034241
+
+Flinn, S., Midway, S., & Ostrowski, A. (2019). Age and Growth of Hardhead Catfish and Gafftopsail Catfish in Coastal Louisiana. Marine and Coastal Fisheries, 11(5), 362-371.
+
+Hayes, C. T., Alford, S. B., Belgrad, B. A., Correia, K. M., Darnell, M. Z., Furman, B. T., ... & Darnell, K. M. (2022). Regional variation in seagrass complexity drives blue crab Callinectes sapidus mortality and growth across the northern Gulf of Mexico. Marine Ecology Progress Series, 693, 141-155.
+
+Nemeth, D. J., Jackson, J. B., Knapp, A. R., & Purtlebaugh, C. H. (2006). Age and growth of sand seatrout (Cynoscion arenarius) in the estuarine waters of the eastern Gulf of Mexico. Gulf of Mexico Science, 24(1), 7.
+
+Schwamborn, R., Mildenberger, T. K., & Taylor, M. H. (2019). Assessing sources of uncertainty in length-based estimates of body growth in populations of fishes and macroinvertebrates with bootstrapped ELEFAN. Ecological Modelling, 393, 37-51.
+
+Sirot, C., Darnaude, A. M., Guilhaumon, F., Ramos-Miranda, J., Flores-Hernandez, D., & Panfili, J. (2015). Linking temporal changes in the demographic structure and individual growth to the decline in the population of a tropical fish. Estuarine, Coastal and Shelf Science, 165, 166-175.
+
+Vastano, A. R., Able, K. W., Jensen, O. P., López-Duarte, P. C., Martin, C. W., & Roberts, B. J. (2017). Age validation and seasonal growth patterns of a subtropical marsh fish: The Gulf Killifish, Fundulus grandis. Environmental Biology of Fishes, 100, 1315-1327.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
