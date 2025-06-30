@@ -67,7 +67,7 @@ dfs$LITSET_PaP$mids = dfs$LITSET_PaP$mids * 10
 k_list    = c(0.25, 0.11/30, 0.513, 0.325/365, 0.61, 2.43/365, 1.35, 0.815)
 linf_list = c(410, 145, NA, 336.85, NA, 87.27, NA, NA)
 absolute  = ifelse(is.na(linf_list), TRUE, FALSE)
-ex_points = c(50, 10, 75, 1, 105, 3, 0, 3)
+ex_points = c(50, 10, 75, 0, 105, 3, 0, 3)
 bin_size  = c(0.1, 2, 2, 0.1, 2, 0.1, 2, 0.1)
 
 cc_res = list()
@@ -119,22 +119,39 @@ mortality_table = data.frame(
 titles = c("Hardhead catfish", "Silver perch", "Blue crab", "White trout", "Spotted seatrout",
            "Gulf killifish", "Pinfish", "White shrimp")
 
-plots = list(
-  plot_catch_curve(dfs$BAICHR_PaP, cc_res$BAICHR_PaP, pars = c(0.11/30, 145), absolute = FALSE, bin_size = 2) +
-    xlim(50,210) + ylim(0,3) + xlab("") + ylab("") + ggtitle(titles[2]),
-  plot_catch_curve(dfs$CALSAP_PaP, cc_res$CALSAP_PaP, pars = 0.513, absolute = TRUE, bin_size = 2) +
-    xlim(0,80) + ylim(1,4) + xlab("") + ylab("") + ggtitle(titles[3]),
-  plot_catch_curve(dfs$CYNARE_PaP, cc_res$CYNARE_PaP, pars = c(k_list[4], linf_list[4]), absolute = FALSE, bin_size = 0.1) +
-    xlim(100, 270) + ylim(0,4) + xlab("") + ylab("") + ggtitle(titles[4]),
-  plot_catch_curve(dfs$CYNNEB_PaP, cc_res$CYNNEB_PaP, pars = k_list[5], absolute = TRUE, bin_size = 2) +
-    xlim(60,130) + ylim(1.5,3.5) + xlab("") + ylab("") + ggtitle(titles[4]),
-  plot_catch_curve(dfs$FUNGRA_PaP, cc_res$FUNGRA_PaP, pars = c(k_list[6], linf_list[6]), absolute = FALSE, bin_size = 0.1) +
-    xlim(60, 210) + ylim(1.5, 4) + xlab("") + ylab("") + ggtitle(titles[6]),
-  plot_catch_curve(dfs$LAGRHO_PaP, cc_res$LAGRHO_PaP, pars = k_list[7], absolute = TRUE, bin_size = 2) +
-    xlim(10, 130) + ylim(1, 3.5) + xlab("") + ylab("") + ggtitle(titles[7]),
-  plot_catch_curve(dfs$LITSET_PaP, cc_res$LITSET_PaP, pars = k_list[8], absolute = TRUE) +
-    xlim(40, 300) + xlab("") + ylab("") + ggtitle(titles[8])
+# add M (mean, sd) as text inside each panel (per species)
+cc_res_text = sapply(
+  cc_res, 
+  function(x) paste0("M = ", round(mean(x$`Z posterior distribution`), 3), " (", round(sd(x$`Z posterior distribution`), 3), ")")
+  )
+
+# Create the catch curve plots
+annotation_df = data.frame(
+  species = names(cc_res_text[-1]),  # Exclude the first element (ARIFEL)
+  label   = cc_res_text[-1],
+  x       = c(200, 70, 250, 120, 150, 100, 280),    
+  y       = c(3, 4, 4, 3.5, 4, 3.5, 6)              
 )
+
+library(purrr)
+plot_params = tibble::tibble(
+  df       = list(dfs$BAICHR_PaP, dfs$CALSAP_PaP, dfs$CYNARE_PaP, dfs$CYNNEB_PaP, dfs$FUNGRA_PaP, dfs$LAGRHO_PaP, dfs$LITSET_PaP),
+  cc       = list(cc_res$BAICHR_PaP, cc_res$CALSAP_PaP, cc_res$CYNARE_PaP, cc_res$CYNNEB_PaP, cc_res$FUNGRA_PaP, cc_res$LAGRHO_PaP, cc_res$LITSET_PaP),
+  pars     = list(c(0.11/30, 145), 0.513, c(k_list[4], linf_list[4]), k_list[5], c(k_list[6], linf_list[6]), k_list[7], k_list[8]),
+  absolute = c(FALSE, TRUE, FALSE, TRUE, FALSE, TRUE, TRUE),
+  bin_size = c(2, 2, 0.1, 2, 0.1, 2, 0.1),
+  xlim     = list(c(50,210), c(0,80), c(100,270), c(60,130), c(60,210), c(10,130), c(40,300)),
+  ylim     = list(c(0,3), c(1,4), c(0,4), c(1.5,3.5), c(1.5,4), c(1,3.5), c(1.8, 6)),
+  title    = titles[2:8]
+)
+
+plots = pmap(plot_params, function(df, cc, pars, absolute, bin_size, xlim, ylim, title) {
+  p = plot_catch_curve(df, cc, pars, absolute, bin_size) +
+    xlab("") + ylab("") + ggtitle(title)
+  if (!is.null(xlim)) p <- p + xlim(xlim)
+  if (!is.null(ylim)) p <- p + ylim(ylim)
+  p
+})
 
 plots = lapply(
   plots,
@@ -148,8 +165,11 @@ plots = lapply(
 # Arrange the plots with ggarrange
 combined_plot = ggarrange(
   plotlist = plots,
-  ncol = 2, nrow = 4, align = "hv",
-  common.legend = TRUE, legend = "bottom")
+  ncol    = 2,
+  nrow    = 4, 
+  align   = "hv",
+  common.legend = TRUE, legend = "bottom"
+  )
 
 annotate_figure(combined_plot,
          bottom = text_grob("Relative age (days)", size = 12, vjust = -1),
@@ -158,16 +178,16 @@ annotate_figure(combined_plot,
 fig_dir = here::here("res", "figures")
 ggsave(
   filename = file.path(fig_dir, "catch_curves.pdf"),
-  plot = combined_plot,
+  plot = last_plot(),
   width = 4.5, height = 5.5, units = "in", dpi = 300
 )
 
 # summary of M posterior distributions (means, sds, quantiles) for each species
 catch_curve_summary_table = data.frame(
-  sp = titles,
+  sp     = titles,
   M_mean = sapply(cc_res, function(x) mean(x$Z)),
-  M_sd = sapply(cc_res, function(x) sd(x$`Z posterior distribution`, na.rm = TRUE)),
-  M_2.5 = sapply(cc_res, function(x) quantile(x$`Z posterior distribution`, probs = 0.025)),
+  M_sd   = sapply(cc_res, function(x) sd(x$`Z posterior distribution`, na.rm = TRUE)),
+  M_2.5  = sapply(cc_res, function(x) quantile(x$`Z posterior distribution`, probs = 0.025)),
   M_97.5 = sapply(cc_res, function(x) quantile(x$`Z posterior distribution`, probs = 0.975))
 );rownames(summary_table) = NULL
 

@@ -40,8 +40,8 @@ for (i in 1:length(data_list)) {
 
 # cutting underrepresented lengths
 data_list$CALSAP_PaP = data_list$CALSAP_PaP[data_list$CALSAP_PaP$Length <= 50, ]
-data_list$CYNNEB_PaP = data_list$CYNNEB_PaP[data_list$CYNNEB_PaP$Length <= 80, ]
-data_list$BAICHR_PaP = data_list$BAICHR_PaP[data_list$BAICHR_PaP$Length <= 85, ]
+data_list$CYNNEB_PaP = data_list$CYNNEB_PaP[data_list$CYNNEB_PaP$Length <= 150, ]
+data_list$BAICHR_PaP = data_list$BAICHR_PaP[data_list$BAICHR_PaP$Length <= 100, ]
 #data_list$LITSET_PaP = data_list$LITSET_PaP[data_list$LITSET_PaP$Length <= 18, ]
 
 
