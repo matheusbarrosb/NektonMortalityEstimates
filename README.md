@@ -1,10 +1,3 @@
----
-title: "Estimating natural mortality rates from length composition"
-output:
-  pdf_document: default
-  html_document: default
----
-
 This repository contains data and code to estimate daily natural mortality rates for various YOY nekton species collected in salt marshes of the Mississippi Sound, Coastal Alabama. Natural mortality rates are estimated by two modelling approaches:
 
 ### 1. The length-converted catch curve
