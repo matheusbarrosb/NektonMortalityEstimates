@@ -88,6 +88,24 @@ $$
 \sigma_{a_{50,k}} \sim \text{Half-Cauchy}(0, 1)
 $$
 
+The full likelihood of the model is therefore given by the follwing expression:
+
+$$
+\mathcal{L} = \prod_{k=1}^{K} \prod_{i=1}^{N} \frac{n_{i,k}!}{C_{i,k}!} \cdot \pi_{i,k}^{C_{i,k}} \cdot (1 - \pi_{i,k})^{n_{i,k} - C_{i,k}} \cdot S_{a,k}
+$$
+
+And the log-likelihood:
+
+$$
+\log \mathcal{L} = \sum_{k=1}^{K} \sum_{i=1}^{N} \left( C_{i,k} \log(\pi_{i,k}) + (n_{i,k} - C_{i,k}) \log(1 - \pi_{i,k}) + \log(S_{a,k}) \right)
+$$
+
+### How to run the models
+
+1. Catch curves: run "/run/01_run_catch_curves.R"
+2. Catch composition model: run "/run/02_run_catch_comps.R"
+3. To visualize the results, run "/run/03_plots_and_tables.R"
+
 ### References
 de Barros, M., Oliveira-Filho, R., Aschenbrenner, A., Hostim-Silva, M., Chiquieri, J., & Schwamborn, R. (2024). Evaluation of traditional and bootstrapped methods for assessing data-poor fisheries: a case study on tropical seabob shrimp (Xiphopenaeus kroyeri) with an improved length-based mortality estimation method. PeerJ, 12, e18397.
 
