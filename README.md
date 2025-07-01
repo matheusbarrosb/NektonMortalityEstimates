@@ -99,6 +99,8 @@ $$
 2. Catch composition model: run "/run/02_run_catch_comps.R"
 3. To visualize the results, run "/run/03_plots_and_tables.R"
 
+Make sure to run in the specified order.
+
 ### References
 de Barros, M., Oliveira-Filho, R., Aschenbrenner, A., Hostim-Silva, M., Chiquieri, J., & Schwamborn, R. (2024). Evaluation of traditional and bootstrapped methods for assessing data-poor fisheries: a case study on tropical seabob shrimp (Xiphopenaeus kroyeri) with an improved length-based mortality estimation method. PeerJ, 12, e18397.
 
