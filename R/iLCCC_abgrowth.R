@@ -5,6 +5,7 @@ iLCCC_abgrowth <- function(mids = NULL,
                            binsize = NULL,
                            ex.points = 1,
                            plot = FALSE,
+                           d_t = FALSE,
                            N_runs = 1000, plot.xlow.lim = NULL, plot.xup.lim = NULL, plot.ylow.lim = NULL, plot.yup.lim = NULL) {
   
   if (is.matrix(catch)) {
@@ -21,9 +22,9 @@ iLCCC_abgrowth <- function(mids = NULL,
   class.min <- mids - (binsize/2)
   class.max <- mids + (binsize/2)
   
-  rel.age <- mids/GR # age at any given size class IN DAYS
+  dt = (class.max - class.min)/GR # amount of time from one size class to another
   
-  # if a midlength is larger than the asympotic size, it is simply excluded from subsequent analysis
+  rel.age <- mids/GR # age at any given size class IN DAYS
   
   lnN <- log(catch+1)
   
@@ -35,10 +36,9 @@ iLCCC_abgrowth <- function(mids = NULL,
   xvar <- df$rel.age
   
   selection <- c(which(yvar == max(yvar)) + 1,
-                 which(xvar == max(xvar)) - ex.points) # select the data rows after the mode (highest point) to fit the line
+                 length(xvar) - ex.points) # select the data rows after the mode (highest point) to fit the line
   # if you suspect of undersampling, modify to c(which(yvar == max(yvar)) + 1,
-  # which(xvar == max(xvar))-1) or -2 or more, this should exclude the largest size classes in the sample from the regression
-  
+
   df.cc <- as.data.frame(cbind(xvar,yvar))
   df.selec.cc <- df.cc[selection[1]:selection[2],]# creates a data frame with only the selected rows
   df.selec.cc <- df.selec.cc[apply(df.selec.cc, 1,

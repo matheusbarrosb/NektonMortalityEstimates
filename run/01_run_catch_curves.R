@@ -35,7 +35,7 @@ for (i in 1:length(data_list)) {
 
 # create length frequency objects
 lfqs = list()
-bin_sizes = c(2,2,2,2,2,2,3,1)
+bin_sizes = c(2,1,2,2,2,2,3,1)
 for (i in 1:length(data_list)) {
   lfqs[[i]] = lfqCreate(data     = data_list[[i]],
                         Lname    = "Length",
@@ -49,8 +49,8 @@ sd_catches = list()
 mids    = list()
 
 for (i in 1:length(lfqs)) {
- # catches[[i]] = rowMeans(lfqs[[i]]$catch)
- catches[[i]] = rowSums(lfqs[[i]]$catch)
+  # catches[[i]] = rowMeans(lfqs[[i]]$catch)
+  catches[[i]] = rowSums(lfqs[[i]]$catch)
   sd_catches[[i]] = apply(lfqs[[i]]$catch, 1, function(x) sd(x)/sqrt(length(x)))
   mids[[i]]    = lfqs[[i]]$midLengths 
 }; names(catches) = names(data_list); names(mids) = names(data_list)
@@ -61,14 +61,12 @@ for (i in 1:length(catches)) {
   colnames(dfs[[i]])[2] = "sd_catches"
 }; names(dfs) = names(data_list)
 
-dfs$LITSET_PaP$mids = dfs$LITSET_PaP$mids * 10
-
 ## Run catch curves ------------------------------------------------------------
 k_list    = c(0.25, 0.11/30, 0.513, 0.325/365, 0.61, 2.43/365, 1.35, 0.815)
 linf_list = c(410, 145, NA, 336.85, NA, 87.27, NA, NA)
 absolute  = ifelse(is.na(linf_list), TRUE, FALSE)
-ex_points = c(50, 10, 75, 0, 105, 3, 0, 3)
-bin_size  = c(0.1, 2, 2, 0.1, 2, 0.1, 2, 0.1)
+ex_points = c(30, 75, 80, 2, 108, 1, 27, 3)
+bin_size  = c(2, 1, 2, 0.1, 2, 0.1, 3, 1)
 
 cc_res = list()
 N_runs = 1000
@@ -77,7 +75,7 @@ plot   = FALSE
 for (i in 1:length(data_list)) {
   
   if (absolute[i] == FALSE) {
-  
+    
     cc_res[[i]] = iLCCC(
       
       mids     = dfs[[i]]$mids,
@@ -89,8 +87,8 @@ for (i in 1:length(data_list)) {
       N_runs   = N_runs,
       plot     = plot,
       ex.points = ex_points[i]
-      )
-      
+    )
+    
   } else {
     
     cc_res[[i]] = iLCCC_abgrowth(
@@ -123,7 +121,7 @@ titles = c("Hardhead catfish", "Silver perch", "Blue crab", "White trout", "Spot
 cc_res_text = sapply(
   cc_res, 
   function(x) paste0("M = ", round(mean(x$`Z posterior distribution`), 3), " (", round(sd(x$`Z posterior distribution`), 3), ")")
-  )
+)
 
 # Create the catch curve plots
 annotation_df = data.frame(
@@ -139,9 +137,9 @@ plot_params = tibble::tibble(
   cc       = list(cc_res$BAICHR_PaP, cc_res$CALSAP_PaP, cc_res$CYNARE_PaP, cc_res$CYNNEB_PaP, cc_res$FUNGRA_PaP, cc_res$LAGRHO_PaP, cc_res$LITSET_PaP),
   pars     = list(c(0.11/30, 145), 0.513, c(k_list[4], linf_list[4]), k_list[5], c(k_list[6], linf_list[6]), k_list[7], k_list[8]),
   absolute = c(FALSE, TRUE, FALSE, TRUE, FALSE, TRUE, TRUE),
-  bin_size = c(2, 2, 0.1, 2, 0.1, 2, 0.1),
-  xlim     = list(c(50,210), c(0,80), c(100,270), c(60,130), c(60,210), c(10,130), c(40,300)),
-  ylim     = list(c(0,3), c(1,4), c(0,4), c(1.5,3.5), c(1.5,4), c(1,3.5), c(1.8, 6)),
+  bin_size = bin_size[-1],
+  xlim     = list(c(50,210), c(0,80), c(100,270), c(60, 130), c(60,210), c(20,130), c(5,30)),
+  ylim     = list(c(0,3), c(1,4), NULL, c(1.5,3.5), c(1.5,4), c(1,3.5), NULL),
   title    = titles[2:8]
 )
 
@@ -169,11 +167,11 @@ combined_plot = ggarrange(
   nrow    = 4, 
   align   = "hv",
   common.legend = TRUE, legend = "bottom"
-  )
+)
 
 annotate_figure(combined_plot,
-         bottom = text_grob("Relative age (days)", size = 12, vjust = -1),
-         left = text_grob("log Catch", rot = 90, size = 12, vjust = 1))
+                bottom = text_grob("Relative age (days)", size = 12, vjust = -1),
+                left = text_grob("log Catch", rot = 90, size = 12, vjust = 1))
 
 fig_dir = here::here("res", "figures")
 ggsave(
@@ -187,10 +185,10 @@ catch_curve_summary_table = data.frame(
   sp     = titles,
   M_mean = sapply(cc_res, function(x) mean(x$Z)),
   M_sd   = sapply(cc_res, function(x) sd(x$`Z posterior distribution`, na.rm = TRUE)),
-  M_2.5  = sapply(cc_res, function(x) quantile(x$`Z posterior distribution`, probs = 0.025)),
-  M_97.5 = sapply(cc_res, function(x) quantile(x$`Z posterior distribution`, probs = 0.975))
-);rownames(summary_table) = NULL
-
+  M_2.5  = sapply(cc_res, function(x) quantile(x$`Z posterior distribution`, probs = 0.025, na.rm = TRUE)),
+  M_97.5 = sapply(cc_res, function(x) quantile(x$`Z posterior distribution`, probs = 0.975, na.rm = TRUE))
+);rownames(catch_curve_summary_table) = NULL
+print(catch_curve_summary_table)
 
 
 

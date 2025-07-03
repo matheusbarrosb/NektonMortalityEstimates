@@ -5,6 +5,10 @@ plot_catch_curve = function(raw_data, cc_res, pars, absolute, bin_size) {
     raw_data$ages = raw_data$mids / pars[1] # convert to relative ages
     reg = cc_res$`Regression input`
     
+    # class.min <- mids - (bin_size/2)
+    # class.max <- mids + (bin_size/2)
+    # dt = (class.max - class.min)/pars[1] # amount of time from one size class to another
+    
     p = raw_data %>%
       ggplot(aes(x = ages, y = log(catch + 1))) +
       geom_point() +

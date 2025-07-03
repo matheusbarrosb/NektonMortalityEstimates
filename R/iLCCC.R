@@ -35,15 +35,16 @@ iLCCC <- function(mids = NULL,
   }
   
   rel.age <- ifelse(mids <= Linf, t0 - (1/K)*log(1 - mids/Linf), NA) # age at any given size class
-  dt <- ifelse(mids <= Linf, (t0 - (1/K)*log(1 - class.max/Linf)) - (t0 - (1/K)*log(1 - class.min/Linf)), NA) # amount of time from one size class to another
+  # dt <- ifelse(mids <= Linf, (t0 - (1/K)*log(1 - class.max/Linf)) - (t0 - (1/K)*log(1 - class.min/Linf)), NA) # amount of time from one size class to another
   # if a midlength is larger than the asympotic size, it is simply excluded from subsequent analysis
   # as calculating dt with midlenths > Linf leads to NaN values
+  dt = ifelse(mids <= Linf, (log((Linf - class.min)/(Linf - class.max))/K),NA)
   
   lnNdt <- ifelse(is.na(dt), NA, log((catch+1)/dt)) # only calculate logged catch if the divisor is != NA
   
   df <- data.frame(lnNdt, rel.age)
   df <- na.exclude(df)
-  df[df == 0] <- NA #exclude zero values
+  #df[df == 0] <- NA #exclude zero values
   
   yvar <- as.numeric(df$lnNdt)
   xvar <- df$rel.age
@@ -61,7 +62,7 @@ iLCCC <- function(mids = NULL,
   
   # some Infs and NaNs can pop up during the process when logarithms end up as imaginary or complex numbers
   
-  df.selec.cc <- subset(df.selec.cc, df.selec.cc$yvar > 1)
+#  df.selec.cc <- subset(df.selec.cc, df.selec.cc$yvar > 1)
   
   lm.cc <- lm(yvar ~ xvar,
               data = df.selec.cc)

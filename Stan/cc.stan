@@ -6,8 +6,12 @@ data {
   int<lower=1> start_idx[K];       // start index for each species in counts
   int<lower=1> end_idx[K];         // end index for each species in counts
   vector[N_total] rel_age;         // concatenated relative ages for each count
-  vector<lower=0>[K] M_prior_mean; // mortality priors
-  vector<lower=0>[K] a50_prior_mean; // selectivity priors
+  // mortality priors
+  vector<lower=0>[K] M_prior_mean;
+  vector<lower=0>[K] M_prior_sd;
+  // selectivity priors
+  vector<lower=0>[K] a50_prior_mean; 
+  vector<lower=0>[K] a50_prior_sd; 
 }
 parameters {
   vector<lower=0>[K] k;
@@ -17,8 +21,8 @@ parameters {
 model {
   // Priors --------------------------------------------------------------------
   k   ~ normal(0, 10);
-  a50 ~ normal(a50_prior_mean, 10);
-  M   ~ normal(M_prior_mean, 0.01);
+  a50 ~ normal(a50_prior_mean, a50_prior_sd);
+  M   ~ normal(M_prior_mean, M_prior_sd);
 
   // Likelihood ----------------------------------------------------------------
   for (s in 1:K) {
@@ -42,6 +46,7 @@ model {
     for (a in 1:n) {
       pred[a] = Sa[a] * Na[a];
     }
+    // Relative catch
     p = pred / sum(pred);
 
     counts[start_idx[s]:end_idx[s]] ~ multinomial(p);

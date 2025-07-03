@@ -29,8 +29,6 @@ names(data_list) = tools::file_path_sans_ext(basename(files))
 k_list    = c(0.25/365, 0.11/30, 0.513, 0.325/365, 0.61, 2.43/365, 1.35, 0.815)
 linf_list = c(410, 145, NA, 336.85, NA, 87.27, NA, NA)
 absolute  = ifelse(is.na(linf_list), TRUE, FALSE)
-ex_points = c(50, 10, 75, 1, 105, 3, 0, 3)
-bin_size  = c(0.1, 2, 2, 0.1, 2, 0.1, 2, 0.1)
 
 ## Process data ----------------------------------------------------------------
 # include dates
@@ -39,11 +37,9 @@ for (i in 1:length(data_list)) {
 }
 
 # cutting underrepresented lengths
-data_list$CALSAP_PaP = data_list$CALSAP_PaP[data_list$CALSAP_PaP$Length <= 50, ]
-data_list$CYNNEB_PaP = data_list$CYNNEB_PaP[data_list$CYNNEB_PaP$Length <= 150, ]
-data_list$BAICHR_PaP = data_list$BAICHR_PaP[data_list$BAICHR_PaP$Length <= 100, ]
-#data_list$LITSET_PaP = data_list$LITSET_PaP[data_list$LITSET_PaP$Length <= 18, ]
-
+data_list$CALSAP_PaP = data_list$CALSAP_PaP[data_list$CALSAP_PaP$Length <= 40, ]
+data_list$CYNNEB_PaP = data_list$CYNNEB_PaP[data_list$CYNNEB_PaP$Length <= 100, ]
+data_list$BAICHR_PaP = data_list$BAICHR_PaP[data_list$BAICHR_PaP$Length <= 70, ]
 
 # create length frequency objects
 lfqs = list()
@@ -69,7 +65,7 @@ for (i in 1:length(catches)) {
   dfs[[i]] = data.frame(catch = catches[[i]], mids  = mids[[i]])
 }; names(dfs) = names(data_list)
 
-dfs$LITSET_PaP$mids = dfs$LITSET_PaP$mids * 10 # convert to mm for LITSET
+#dfs$LITSET_PaP$mids = dfs$LITSET_PaP$mids * 10 # convert to mm for LITSET
 
 # pass data to Stan
 N = rep(NA, length(dfs))
@@ -105,7 +101,7 @@ for (i in 1:length(dfs)) {
   } else {
     rel_ages[[i]] = -(1/k_list[i]) * log(1 - (dfs[[i]]$mids / linf_list[i]))
   }
-};names(rel_age) = names(dfs)
+};names(rel_ages) = names(dfs)
 
 # After removing zeros:
 counts_concat = unlist(catches)
@@ -135,21 +131,25 @@ data_list = list(N_total = length(counts_concat),
                  start_idx = start_idx,
                  end_idx = end_idx)
 
-# add priors for M and a50 based on mortality_table
-data_list$M_prior_mean = c(mortality_table$M[1:8])
-data_list$a50_prior_mean = c(400, 100, 30, 150, 70, 90, 40, 120)
-
+# add priors for M and a50
+data_list$M_prior_mean = c(catch_curve_summary_table$M_mean[1:8])
+data_list$M_prior_sd = c(catch_curve_summary_table$M_sd[1:8] * 4) # multiply by 4 to widen the prior
+data_list$a50_prior_mean = c(400, 80, 15, 120, 60, 90, 40, 10)
+data_list$a50_prior_sd   = c(100, 10,   3,   5,  2, 90, 40,  2)
 
 # fit model --------------------------------------------------------------------
 rstan::stanc("stan/cc.stan")
 stan_model = rstan::stan_model("stan/cc.stan") # compile model
-n_chains = 2
+n_chains = 1
 fit = rstan::sampling(stan_model, 
-                      data   = data_list,
-                      iter   = 3000,
-                      warmup = 500,
-                      chains = n_chains,
-                      seed   = 2027)
+                      data    = data_list,
+                      iter    = 1000,
+                      warmup  = 300,
+                      chains  = n_chains,
+                      seed    = 2027)
+
+# verify convergence
+rstan::check_hmc_diagnostics(fit)
 
 # Plotting ---------------------------------------------------------------------
 # 1. Selectivity curves
@@ -171,6 +171,18 @@ rel_age_df <- rel_age_df %>%
     selectivity = 1 / (1 + exp(-k * (rel_age - a50)))
   )
 
+Sa = rep(NA, length(rel_age_df$rel_age))
+for (i in 1:data_list$N_total) {
+  
+  for(k in 1:length(k_meds)) {
+    
+    Sa[i] = 1 / (1 + exp(-k_meds[k] * (rel_age_df$rel_age[i] - a50_meds[k])))
+    
+  }
+}
+
+rel_age_df$selectivity <- Sa
+
 library(ggplot2)
 ggplot(rel_age_df, aes(x = rel_age, y = selectivity, color = as.factor(species))) +
   geom_line(linewidth = 1) +
@@ -185,7 +197,7 @@ library(ggplot2)
 library(purrr)
 
 K <- length(A)
-n_draws <- 1000  # Number of posterior draws to use for predictive intervals
+n_draws <- 500  # Number of posterior draws to use for predictive intervals
 draw_ids <- sample(nrow(post), n_draws)
 
 pred_list <- vector("list", K)
@@ -233,7 +245,7 @@ all_pred_df$species = factor(all_pred_df$species,
 ggplot(all_pred_df, aes(x = rel_age)) +
   geom_point(aes(y = obs_prop), color = "black", size = 2, pch = 20) +
   geom_line(aes(y = pred_mean), size = 1, color = "red") +
-  geom_ribbon(aes(ymin = pred_lower/2, ymax = pred_upper*2), alpha = 0.15) +
+  geom_ribbon(aes(ymin = pred_lower, ymax = pred_upper), alpha = 0.15) +
   facet_wrap(~ species, scales = "free", nrow = 4) +
   labs(x = "Relative age (days)", y = "Proportion in catch") +
   custom_theme()
@@ -245,15 +257,6 @@ ggsave(
   width = 4.5, height = 5.5, dpi = 300
 )
 
-# plot in log space
-ggplot(all_pred_df, aes(x = rel_age)) +
-  geom_point(aes(y = log(obs_prop + 1)), color = "black", size = 2, pch = 20) +
-  geom_line(aes(y = log(pred_mean + 1)), size = 1, color = "red") +
-  geom_ribbon(aes(ymin = log(pred_lower + 1), ymax = log(pred_upper + 1)), alpha = 0.15) +
-  facet_wrap(~ species, scales = "free", nrow = 4) +
-  labs(x = "Relative age (days)", y = "log(Proportion in catch + 1)") +
-  custom_theme()
-
 # summary of M posterior distributions (means, sds, quantiles) for each species
 catch_comp_summary_table = data.frame(
   sp = sp_labels,
@@ -262,3 +265,4 @@ catch_comp_summary_table = data.frame(
   M_2.5 = sapply(2:8, function(s) quantile(post[[paste0("M.", s)]], probs = 0.025)),
   M_97.5 = sapply(2:8, function(s) quantile(post[[paste0("M.", s)]], probs = 0.975))
 );rownames(catch_curve_summary_table) = NULL
+print(catch_comp_summary_table)
