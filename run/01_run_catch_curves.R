@@ -44,13 +44,13 @@ for (i in 1:length(data_list)) {
 }
 
 # create catch composition dataframes
-catches = list()
+catches    = list()
 sd_catches = list()
-mids    = list()
+mids       = list()
 
 for (i in 1:length(lfqs)) {
   # catches[[i]] = rowMeans(lfqs[[i]]$catch)
-  catches[[i]] = rowSums(lfqs[[i]]$catch)
+  catches[[i]] = rowSums(lfqs[[i]]$catch) + 1
   sd_catches[[i]] = apply(lfqs[[i]]$catch, 1, function(x) sd(x)/sqrt(length(x)))
   mids[[i]]    = lfqs[[i]]$midLengths 
 }; names(catches) = names(data_list); names(mids) = names(data_list)
@@ -65,8 +65,8 @@ for (i in 1:length(catches)) {
 k_list    = c(0.25, 0.11/30, 0.513, 0.325/365, 0.61, 2.43/365, 1.35, 0.815)
 linf_list = c(410, 145, NA, 336.85, NA, 87.27, NA, NA)
 absolute  = ifelse(is.na(linf_list), TRUE, FALSE)
-ex_points = c(30, 75, 80, 2, 108, 1, 27, 3)
-bin_size  = c(2, 1, 2, 0.1, 2, 0.1, 3, 1)
+ex_points = c(30, 75, 85, 2, 108, 1, 27, 3)
+bin_size  = c(2, 1, 2, 0.1, 2, 0.001, 3, 1)
 
 cc_res = list()
 N_runs = 1000
@@ -124,13 +124,6 @@ cc_res_text = sapply(
 )
 
 # Create the catch curve plots
-annotation_df = data.frame(
-  species = names(cc_res_text[-1]),  # Exclude the first element (ARIFEL)
-  label   = cc_res_text[-1],
-  x       = c(200, 70, 250, 120, 150, 100, 280),    
-  y       = c(3, 4, 4, 3.5, 4, 3.5, 6)              
-)
-
 library(purrr)
 plot_params = tibble::tibble(
   df       = list(dfs$BAICHR_PaP, dfs$CALSAP_PaP, dfs$CYNARE_PaP, dfs$CYNNEB_PaP, dfs$FUNGRA_PaP, dfs$LAGRHO_PaP, dfs$LITSET_PaP),
@@ -138,8 +131,8 @@ plot_params = tibble::tibble(
   pars     = list(c(0.11/30, 145), 0.513, c(k_list[4], linf_list[4]), k_list[5], c(k_list[6], linf_list[6]), k_list[7], k_list[8]),
   absolute = c(FALSE, TRUE, FALSE, TRUE, FALSE, TRUE, TRUE),
   bin_size = bin_size[-1],
-  xlim     = list(c(50,210), c(0,80), c(100,270), c(60, 130), c(60,210), c(20,130), c(5,30)),
-  ylim     = list(c(0,3), c(1,4), NULL, c(1.5,3.5), c(1.5,4), c(1,3.5), NULL),
+  xlim     = list(c(50,210), c(0,80), c(100,270), c(60, 130), c(60,220), c(20,110), c(5,30)),
+  ylim     = list(c(0,3), c(1,4), NULL, c(1.5,3.5), NULL, c(1,3.5), NULL),
   title    = titles[2:8]
 )
 

@@ -1,11 +1,10 @@
 data {
   int<lower=1> K;                  // number of species
   int<lower=1> N_total;            // total number of counts (sum over all species)
-  array[K] int<lower=0> A;
-  //int<lower=1> A[K];               // number of age bins per species
-  array[N_total] int<lower=0> counts;    // concatenated observed counts
-  array[K] int<lower=1> start_idx;
-  array[K] int<lower=1> end_idx;
+  int<lower=1> A[K];               // number of age bins per species
+  int<lower=0> counts[N_total];    // concatenated observed counts
+  int<lower=1> start_idx[K];       // start index for each species in counts
+  int<lower=1> end_idx[K];         // end index for each species in counts
   vector[N_total] rel_age;         // concatenated relative ages for each count
   // mortality priors
   vector<lower=0>[K] M_prior_mean;
@@ -18,13 +17,15 @@ parameters {
   vector<lower=0>[K] k;
   vector<lower=0>[K] a50;
   vector<lower=0>[K] M;
+  vector<lower=0>[K] alpha;
 }
 model {
   // Priors --------------------------------------------------------------------
-  k   ~ normal(0, 10);
-  a50 ~ normal(a50_prior_mean, a50_prior_sd);
-  M   ~ normal(M_prior_mean, M_prior_sd);
-
+  k     ~ normal(0, 2);
+  a50   ~ normal(a50_prior_mean, a50_prior_sd);
+  M     ~ normal(M_prior_mean, M_prior_sd);
+  alpha ~ exponential(1);
+  
   // Likelihood ----------------------------------------------------------------
   for (s in 1:K) {
     int n = A[s];
@@ -50,6 +51,7 @@ model {
     // Relative catch
     p = pred / sum(pred);
 
-    counts[start_idx[s]:end_idx[s]] ~ multinomial(p);
+   # counts[start_idx[s]:end_idx[s]] ~ multinomial(p);
+   counts[start_idx[s]:end_idx[s]] ~ dirichlet_multinomial(alpha * p);
   }
 }

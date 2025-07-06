@@ -37,7 +37,6 @@ iLCCC_abgrowth <- function(mids = NULL,
   
   selection <- c(which(yvar == max(yvar)) + 1,
                  length(xvar) - ex.points) # select the data rows after the mode (highest point) to fit the line
-  # if you suspect of undersampling, modify to c(which(yvar == max(yvar)) + 1,
 
   df.cc <- as.data.frame(cbind(xvar,yvar))
   df.selec.cc <- df.cc[selection[1]:selection[2],]# creates a data frame with only the selected rows

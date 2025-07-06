@@ -1,6 +1,5 @@
 #### Packages ####
-list_of_packages = c("TropFishR", "dplyr", "Matrix", "here", "tools", "ggplot2", "patchwork")
-
+list_of_packages = c("TropFishR", "dplyr", "Matrix", "here", "tools", "ggplot2", "patchwork", "cmdstanr")
 new_packages = list_of_packages[!(list_of_packages %in% installed.packages()[,"Package"])]
 if(length(new_packages)) {
   install.packages(new_packages)
@@ -13,6 +12,9 @@ require(here)
 require(tools)
 require(ggplot2)
 require(patchwork)
+require(cmdstanr) 
+require(purrr)
+require(cmdstanr)
 
 ## Source functions ------------------------------------------------------------
 function_dir = here::here("R")
@@ -65,8 +67,6 @@ for (i in 1:length(catches)) {
   dfs[[i]] = data.frame(catch = catches[[i]], mids  = mids[[i]])
 }; names(dfs) = names(data_list)
 
-#dfs$LITSET_PaP$mids = dfs$LITSET_PaP$mids * 10 # convert to mm for LITSET
-
 # pass data to Stan
 N = rep(NA, length(dfs))
 for (i in 1:length(dfs)) {
@@ -86,12 +86,12 @@ sp_index = as.numeric(factor(sp_names, levels = c("ARIFEL", "BAICHR", "CALSAP", 
 "LAGRHO", "LITSET")))
 
 counts_concat = unlist(catches)
-zero_index = which(counts_concat == 0) # remove zero counts
+zero_index    = which(counts_concat == 0) # remove zero counts
 counts_concat = counts_concat[-zero_index] # All counts in one long vector
-A = sapply(catches, length)     # Number of age bins per species
-K = length(A)
-start_idx = cumsum(c(1, head(A, -1)))
-end_idx = cumsum(A)
+A             = sapply(catches, length)     # Number of age bins per species
+K             = length(A)
+start_idx     = cumsum(c(1, head(A, -1)))
+end_idx       = cumsum(A)
 
 # add relative age to each dataframe
 rel_ages = list()
@@ -118,12 +118,16 @@ K = length(A)
 start_idx = cumsum(c(1, head(A, -1)))
 end_idx = cumsum(A)
 
-# temporary fix to test the model
 rel_age[is.na(rel_age) | is.nan(rel_age)] = 470
 
+# also concatenate mids like counts
+length_obs = unlist(mids)
+length_obs = length_obs[-zero_index] # remove zero counts
 
 # # create data list for Stan
 data_list = list(N_total = length(counts_concat),
+                 length_obs = length_obs,
+                 growth_model = c(1, 1, 2, 1, 2 ,1, 2, 2), # 1 VB, 2 linear 
                  K = K,
                  A = A,
                  counts = counts_concat,
@@ -131,64 +135,88 @@ data_list = list(N_total = length(counts_concat),
                  start_idx = start_idx,
                  end_idx = end_idx)
 
-# add priors for M and a50
+# add priors and hyperpriors
 data_list$M_prior_mean = c(catch_curve_summary_table$M_mean[1:8])
 data_list$M_prior_sd = c(catch_curve_summary_table$M_sd[1:8] * 4) # multiply by 4 to widen the prior
-data_list$a50_prior_mean = c(400, 80, 15, 120, 60, 90, 40, 10)
-data_list$a50_prior_sd   = c(100, 10,   3,   5,  2, 90, 40,  2)
+data_list$M_prior_sd[6] = 0.1
+data_list$a50_prior_mean = c(400, 80, 15, 120, 60, 80, 40, 10)
+data_list$a50_prior_sd   = c(100, 10,   3,   5,  2, 5, 40,  2)
 
 # fit model --------------------------------------------------------------------
-rstan::stanc("stan/cc.stan")
-stan_model = rstan::stan_model("stan/cc.stan") # compile model
-n_chains = 1
-fit = rstan::sampling(stan_model, 
-                      data    = data_list,
-                      iter    = 1000,
-                      warmup  = 300,
-                      chains  = n_chains,
-                      seed    = 2027)
+stan_model_1 = cmdstanr::cmdstan_model("stan/cc.stan")
+stan_model_2 = cmdstanr::cmdstan_model("stan/ccdm.stan")
 
-# verify convergence
-rstan::check_hmc_diagnostics(fit)
+n_chains = 4
+
+fit = stan_model_1$sample(
+  data          = data_list,
+  iter_sampling = 10000,
+  iter_warmup   = 1000,
+  chains        = n_chains,
+  seed          = 2027
+)
+
+
+if (all(fit$summary(variables = c("a50", "M"))$rhat < 1.01)) {
+  message("All parameters converged successfully.")
+} else {
+  message("Some parameters did not converge. Check the Rhat values.")
+}
+
+fit$summary(variables = c("a50", "M")) %>%
+  dplyr::select(variable, mean, sd, rhat, ess_bulk, ess_tail)
 
 # Plotting ---------------------------------------------------------------------
 # 1. Selectivity curves
-post <- as.data.frame(rstan::extract(fit, pars = c("k", "a50", "M")))
+post = fit$draws(variables = c("k", "a50", "M"), format = "df")
 
-K <- length(grep("^k\\[", colnames(post))) # number of species
+K = data_list$K
 
-rel_age_df <- purrr::imap_dfr(rel_ages, function(rel, sp) {
+rel_age_df = purrr::imap_dfr(rel_ages, function(rel, sp) {
   tibble(species = sp, rel_age = rel)
 })
 
-k_meds   <- apply(post[ , grep("^k\\.", names(post))], 2, median)
-a50_meds <- apply(post[ , grep("^a50\\.", names(post))], 2, median)
+k_cols = grep("^k\\[", names(post), value = TRUE)
+a50_cols = grep("^a50\\[", names(post), value = TRUE)
 
-rel_age_df <- rel_age_df %>%
-  mutate(
-    k = k_meds[species],
-    a50 = a50_meds[species],
-    selectivity = 1 / (1 + exp(-k * (rel_age - a50)))
-  )
+k_meds   = apply(post[, k_cols], 2, median)
+k_sds   = apply(post[, k_cols], 2, sd)
+a50_meds = apply(post[ , a50_cols], 2, median)
+a50_sds   = apply(post[ , a50_cols], 2, sd)
 
-Sa = rep(NA, length(rel_age_df$rel_age))
-for (i in 1:data_list$N_total) {
-  
-  for(k in 1:length(k_meds)) {
-    
-    Sa[i] = 1 / (1 + exp(-k_meds[k] * (rel_age_df$rel_age[i] - a50_meds[k])))
-    
-  }
-}
+k_df   = tibble(species = names(dfs), k = as.numeric(k_meds), k_sd = as.numeric(k_sds))
+a50_df = tibble(species = names(dfs), a50 = as.numeric(a50_meds), a50_sd = as.numeric(a50_sds))
 
-rel_age_df$selectivity <- Sa
+rel_age_df = rel_age_df %>%
+  filter(species != "ARIFEL_PaP") %>% 
+  left_join(k_df, by = "species") %>%
+  left_join(a50_df, by = "species") %>%
+  mutate(mu_sa = 1 / (1 + exp(-k * (rel_age - a50))),
+         low_sa = 1 / (1 + exp(-(k - k_sd) * (rel_age - (a50 + a50_sd)))),
+         high_sa = 1 / (1 + exp(-(k + k_sd) * (rel_age - (a50 - a50_sd)))))
 
-library(ggplot2)
-ggplot(rel_age_df, aes(x = rel_age, y = selectivity, color = as.factor(species))) +
-  geom_line(linewidth = 1) +
-  labs(x = "Relative age", y = "Selectivity Sₐ", color = "Species") +
+# use species common names
+sp_labels = c("Silver perch", "Blue crab", "White trout", "Spotted seatrout",
+  "Gulf killifish", "Pinfish", "White shrimp")
+rel_age_df$species = as.numeric(as.factor(rel_age_df$species)) # convert to numeric for factor levels
+rel_age_df$species = factor(rel_age_df$species, 
+                            levels = 1:7, 
+                            labels = sp_labels)
+
+ggplot(rel_age_df, aes(x = rel_age, y = mu_sa)) +
+  geom_line(linewidth = 0.5) +
+  #geom_ribbon(aes(ymin = low_sa, ymax = high_sa), alpha = 0.1) +
+  labs(x = "Relative age (days)", y = "Selectivity", color = "Species") +
   custom_theme() +
-  facet_wrap(~ species, scales = "free_x")
+  facet_wrap(~ species, scales = "free_x", nrow = 4)
+
+# save the selectivity plot
+fig_dir = here::here("res", "figures")
+ggsave(
+  filename = file.path(fig_dir, "selectivity_curves.pdf"),
+  plot = last_plot(),
+  width = 4.5, height = 5.5, dpi = 300
+)
 
 # 2. Observed vs. predicted catch compositions
 library(dplyr)
@@ -199,37 +227,38 @@ library(purrr)
 K <- length(A)
 n_draws <- 500  # Number of posterior draws to use for predictive intervals
 draw_ids <- sample(nrow(post), n_draws)
-
 pred_list <- vector("list", K)
+k_names   <- paste0("k[",   1:K, "]")
+a50_names <- paste0("a50[", 1:K, "]")
+M_names   <- paste0("M[",   1:K, "]")
 
 for (s in 1:K) {
   idxs <- start_idx[s]:end_idx[s]
   n_bin <- length(idxs)
   rel_age_s <- rel_age[idxs]
   obs_s <- counts_concat[idxs]
-  pred_mat <- matrix(NA, nrow = n_draws, ncol = n_bin)
+  pred_mat <- matrix(NA_real_, nrow = n_draws, ncol = n_bin)
   for (d in 1:n_draws) {
-    k <- post[draw_ids[d], paste0("k.", s)]
-    a50 <- post[draw_ids[d], paste0("a50.", s)]
-    M <- post[draw_ids[d], paste0("M.", s)]
+    k   <- as.numeric(post[draw_ids[d], k_names[s]])
+    a50 <- as.numeric(post[draw_ids[d], a50_names[s]])
+    M   <- as.numeric(post[draw_ids[d], M_names[s]])
     Sa <- 1 / (1 + exp(-k * (rel_age_s - a50)))
     Na <- cumprod(c(1, rep(exp(-M), n_bin - 1)))
     pred <- Sa * Na
-    pred_mat[d, ] <- pred / sum(pred)
+    pred_vec <- as.numeric(pred / sum(pred))
+    pred_mat[d, ] <- pred_vec # pred_vec should be length n_bin
   }
-  # summarize posterior predictive mean and interval
   pred_df <- data.frame(
     bin = seq_along(idxs),
     rel_age = rel_age_s,
     obs_prop = obs_s / sum(obs_s),
-    pred_mean = colMeans(pred_mat),
-    pred_lower = apply(pred_mat, 2, quantile, 0.025),
-    pred_upper = apply(pred_mat, 2, quantile, 0.975),
+    pred_mean = colMeans(pred_mat, na.rm = TRUE),
+    pred_lower = apply(pred_mat, 2, quantile, 0.025, na.rm = TRUE),
+    pred_upper = apply(pred_mat, 2, quantile, 0.975, na.rm = TRUE),
     species = s
   )
   pred_list[[s]] <- pred_df
 }
-
 # exclude species 1 first
 pred_list = pred_list[-1]  # Exclude ARIFEL
 
@@ -258,11 +287,12 @@ ggsave(
 )
 
 # summary of M posterior distributions (means, sds, quantiles) for each species
-catch_comp_summary_table = data.frame(
-  sp = sp_labels,
-  M_mean = sapply(2:8, function(s) mean(post[[paste0("M.", s)]])),
-  M_sd = sapply(2:8, function(s) sd(post[[paste0("M.", s)]])),
-  M_2.5 = sapply(2:8, function(s) quantile(post[[paste0("M.", s)]], probs = 0.025)),
-  M_97.5 = sapply(2:8, function(s) quantile(post[[paste0("M.", s)]], probs = 0.975))
-);rownames(catch_curve_summary_table) = NULL
+catch_comp_summary_table <- data.frame(
+  sp    = sp_labels,
+  M_mean  = sapply(2:8, function(s) mean(post[[paste0("M[", s, "]")]])),
+  M_sd    = sapply(2:8, function(s) sd(post[[paste0("M[", s, "]")]])),
+  M_2.5   = sapply(2:8, function(s) quantile(post[[paste0("M[", s, "]")]], probs = 0.025)),
+  M_97.5  = sapply(2:8, function(s) quantile(post[[paste0("M[", s, "]")]], probs = 0.975))
+)
+rownames(catch_comp_summary_table) <- NULL
 print(catch_comp_summary_table)
