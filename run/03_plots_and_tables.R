@@ -1,7 +1,7 @@
 # plot M posterior distribution across methods
 M_df = rbind(
-  catch_curve_summary_table %>% mutate(method = "iLCCC"),
-  catch_comp_summary_table %>% mutate(method = "Catch composition")
+  catch_curve_summary_table %>% mutate(method = "Catch curves"),
+    catch_comp_summary_table %>% mutate(method = "IBCL")
 )
 
 M_df[4,4] = 0
@@ -16,7 +16,7 @@ M_df %>%
   custom_theme() +
   xlab("") +
   ylab(expression(M~"(day"^{-1}*")")) +
-  scale_color_manual(values = c("Catch composition" = "red", "iLCCC" = "black")) +
+  scale_color_manual(values = c("IBCL" = "red", "Catch curves" = "black")) +
   theme(legend.title = element_blank(),
         legend.position = "top")
 
@@ -30,8 +30,8 @@ library(knitr)
 library(kableExtra)
 # Combine the two summary tables
 combined_summary_table <- merge(
-  catch_curve_summary_table %>% mutate(method = "iLCCC"),
-  catch_comp_summary_table %>% mutate(method = "Catch composition"),
+  catch_curve_summary_table %>% mutate(method = "Catch curves"),
+  catch_comp_summary_table %>% mutate(method = "IBCL"),
   by = "sp", suffixes = c("_iLCCC", "_CatchComp")
 ); catch_curve_summary_table[7,4] = 0
 # Select relevant columns and rename them
