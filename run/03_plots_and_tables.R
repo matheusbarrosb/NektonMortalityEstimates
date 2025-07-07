@@ -1,3 +1,35 @@
+# plot size distribution histograms
+sp_labels = c("Silver perch", "Blue crab", "White trout", "Spotted seatrout",
+              "Gulf killifish", "Pinfish", "White shrimp")
+
+# join dfs and add species names column
+dfs_joined = do.call(rbind, lapply(names(dfs), function(x) {
+  df = dfs[[x]]
+  df$sp = x
+  return(df)
+})); dfs_joined = dfs_joined %>% filter(catch > 0) %>% filter(sp != "ARIFEL_PaP") 
+# replace sp labels with sp_labels
+dfs_joined$sp = factor(dfs_joined$sp, levels = names(data_list[-1]), labels = sp_labels)
+
+# transform to long format for histograms 
+dfs_joined %>%
+  select(sp, mids, catch) %>%
+  uncount(catch) %>%
+  rename(length = mids) %>%
+  
+  ggplot(aes(x = length)) +
+  geom_histogram(bins = 20, position = "identity", color = "black", fill = "red", alpha = 0.7) +
+  facet_wrap(~ sp, scales = "free", nrow = 4) +
+  custom_theme() +
+  xlab("Length (mm)") +
+  ylab("Count")
+  
+fig_dir = here::here("res", "figures")
+ggsave(
+  filename = file.path(fig_dir, "lfqs.pdf"),
+  width = 4, height = 5, dpi = 300
+)
+
 # plot M posterior distribution across methods
 M_df = rbind(
   catch_curve_summary_table %>% mutate(method = "Catch curves"),

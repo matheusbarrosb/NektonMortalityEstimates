@@ -919,7 +919,7 @@ sens_df %>%
 res_dir = here::here("res/figures")
 ggsave(
   last_plot(),
-  filename = file.path(res_dir, "sensitivity_analysis.png"),
+  filename = file.path(res_dir, "sensitivity.pdf"),
   width = 8, height = 6, dpi = 300
 )
 
