@@ -1,3 +1,31 @@
+for (i in 1:length(data_list)) {
+  data_list[[i]]$samp_date = as.Date(data_list[[i]]$samp_date, format = "%d.%m.%Y")
+}
+
+# create length frequency objects
+lfqs = list()
+bin_sizes = c(2,2,1,1,1,1,1,0.5)
+for (i in 1:length(data_list)) {
+  lfqs[[i]] = lfqCreate(data     = data_list[[i]],
+                        Lname    = "Length",
+                        Dname    = "samp_date",
+                        bin_size = bin_sizes[i])
+};names(lfqs) = names(data_list)
+
+# create catch composition dataframes
+catches = list()
+mids    = list()
+
+for (i in 1:length(lfqs)) {
+  catches[[i]] = rowSums(lfqs[[i]]$catch)
+  mids[[i]]    = lfqs[[i]]$midLengths
+}; names(catches) = names(data_list); names(mids) = names(data_list)
+
+dfs = list()
+for (i in 1:length(catches)) {
+  dfs[[i]] = data.frame(catch = catches[[i]], mids  = mids[[i]])
+}; names(dfs) = names(data_list)
+
 # plot size distribution histograms
 sp_labels = c("Silver perch", "Blue crab", "White trout", "Spotted seatrout",
               "Gulf killifish", "Pinfish", "White shrimp")
