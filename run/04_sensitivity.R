@@ -24,6 +24,7 @@ for (file in source_files) source(file)
 ### Load data ------------------------------------------------------------------
 data_dir  = here::here("data")
 files     = list.files(data_dir, pattern = "\\.csv$", full.names = TRUE)
+files = files[!grepl("ShrimpRegression.csv", files)]
 data_list = lapply(files, read.csv) 
 
 names(data_list) = tools::file_path_sans_ext(basename(files))
@@ -33,6 +34,8 @@ names(data_list) = tools::file_path_sans_ext(basename(files))
 for (i in 1:length(data_list)) {
   data_list[[i]]$samp_date = as.Date(data_list[[i]]$samp_date, format = "%d.%m.%Y")
 }
+
+data_list$LITSET_PaP$Length = data_list$LITSET_PaP$Length * 4.781 + 5.847
 
 # create length frequency objects
 lfqs = list()
@@ -66,7 +69,7 @@ for (i in 1:length(catches)) {
 k_list    = c(0.25, 0.11/30, 0.513, 0.325/365, 0.61, 2.43/365, 1.35, 0.815) * 0.8
 linf_list = c(410, 145, NA, 336.85, NA, 87.27, NA, NA) * 0.8
 absolute  = ifelse(is.na(linf_list), TRUE, FALSE)
-ex_points = c(30, 50, 85, 2, 108, 1, 27, 3)
+ex_points = c(30, 50, 86, 2, 108, 1, 27, 3)
 bin_size  = c(2, 1, 2, 0.1, 2, 0.001, 3, 1)
 
 cc_res = list()
@@ -127,7 +130,7 @@ print(catch_curve_summary_minus_20)
 k_list    = c(0.25, 0.11/30, 0.513, 0.325/365, 0.61, 2.43/365, 1.35, 0.815) * 0.9
 linf_list = c(410, 145, NA, 336.85, NA, 87.27, NA, NA) * 0.9
 absolute  = ifelse(is.na(linf_list), TRUE, FALSE)
-ex_points = c(30, 50, 85, 2, 108, 1, 27, 3)
+ex_points = c(30, 50, 86, 2, 108, 1, 27, 3)
 bin_size  = c(2, 1, 2, 0.1, 2, 0.001, 3, 1)
 
 cc_res = list()
@@ -188,7 +191,7 @@ print(catch_curve_summary_minus_10)
 k_list    = c(0.25, 0.11/30, 0.513, 0.325/365, 0.61, 2.43/365, 1.35, 0.815) * 1.1
 linf_list = c(410, 145, NA, 336.85, NA, 87.27, NA, NA) * 1.1
 absolute  = ifelse(is.na(linf_list), TRUE, FALSE)
-ex_points = c(30, 65, 85, 2, 108, 1, 27, 3)
+ex_points = c(30, 65, 86, 2, 108, 1, 27, 3)
 bin_size  = c(2, 1, 2, 0.1, 2, 0.001, 3, 1)
 
 cc_res = list()
@@ -249,7 +252,7 @@ print(catch_curve_summary_plus_10)
 k_list    = c(0.25, 0.11/30, 0.513, 0.325/365, 0.61, 2.43/365, 1.35, 0.815) * 1.2
 linf_list = c(410, 145, NA, 336.85, NA, 87.27, NA, NA) * 1.2
 absolute  = ifelse(is.na(linf_list), TRUE, FALSE)
-ex_points = c(30, 65, 85, 2, 108, 3, 27, 3)
+ex_points = c(30, 65, 86, 2, 108, 3, 27, 3)
 bin_size  = c(2, 1, 2, 0.1, 2, 0.001, 3, 1)
 
 cc_res = list()
@@ -319,6 +322,7 @@ catch_curve_summary = rbind(
 ## - 10 % ----------------------------------------------------------------------
 data_dir  = here::here("data")
 files     = list.files(data_dir, pattern = "\\.csv$", full.names = TRUE)
+files = files[!grepl("ShrimpRegression.csv", files)]
 data_list = lapply(files, read.csv) 
 names(data_list) = tools::file_path_sans_ext(basename(files))
 
@@ -329,6 +333,7 @@ absolute  = ifelse(is.na(linf_list), TRUE, FALSE)
 for (i in 1:length(data_list)) {
   data_list[[i]]$samp_date = as.Date(data_list[[i]]$samp_date, format = "%d.%m.%Y")
 }
+data_list$LITSET_PaP$Length = data_list$LITSET_PaP$Length * 4.781 + 5.847
 
 # cutting underrepresented lengths
 data_list$CALSAP_PaP = data_list$CALSAP_PaP[data_list$CALSAP_PaP$Length <= 40, ]
@@ -337,7 +342,7 @@ data_list$BAICHR_PaP = data_list$BAICHR_PaP[data_list$BAICHR_PaP$Length <= 70, ]
 
 # create length frequency objects
 lfqs = list()
-bin_sizes = c(2,2,1,1,1,1,1,0.5)
+bin_sizes = c(2,2,1,1,1,1,1,1)
 for (i in 1:length(data_list)) {
   lfqs[[i]] = lfqCreate(data     = data_list[[i]],
                         Lname    = "Length",
@@ -431,15 +436,15 @@ data_list = list(N_total = length(counts_concat),
 data_list$M_prior_mean = c(catch_curve_summary_table$M_mean[1:8])
 data_list$M_prior_sd = c(catch_curve_summary_table$M_sd[1:8] * 4) # multiply by 4 to widen the prior
 data_list$M_prior_sd[6] = 0.1
-data_list$a50_prior_mean = c(400, 80, 15, 120, 60, 80, 40, 10)
+data_list$a50_prior_mean = c(400, 80, 15, 120, 60, 80, 40, 60)
 data_list$a50_prior_sd   = c(100, 10,   3,   5,  2, 5, 40,  2)
 
 # fit model --------------------------------------------------------------------
 stan_model_1 = cmdstanr::cmdstan_model("stan/cc.stan")
-n_chains = 4
+n_chains = 2
 fit = stan_model_1$sample(
   data          = data_list,
-  iter_sampling = 10000,
+  iter_sampling = 5000,
   iter_warmup   = 1000,
   chains        = n_chains,
   seed          = 2027
@@ -458,11 +463,12 @@ catch_comp_summary_minus_10 = data.frame(
   M_97.5  = sapply(2:8, function(s) quantile(post[[paste0("M[", s, "]")]], probs = 0.975))
 )
 rownames(catch_comp_summary_minus_10) <- NULL
-print(catch_comp_summary_minus_10)
+catch_comp_summary_minus_10[7,2:5] = catch_comp_summary_minus_10[7,2:5]*scal
 
 ## - 20 % ----------------------------------------------------------------------
 data_dir  = here::here("data")
 files     = list.files(data_dir, pattern = "\\.csv$", full.names = TRUE)
+files = files[!grepl("ShrimpRegression.csv", files)]
 data_list = lapply(files, read.csv) 
 names(data_list) = tools::file_path_sans_ext(basename(files))
 
@@ -556,15 +562,15 @@ data_list = list(N_total = length(counts_concat),
 data_list$M_prior_mean = c(catch_curve_summary_table$M_mean[1:8])
 data_list$M_prior_sd = c(catch_curve_summary_table$M_sd[1:8] * 4) # multiply by 4 to widen the prior
 data_list$M_prior_sd[6] = 0.1
-data_list$a50_prior_mean = c(400, 80, 15, 120, 60, 80, 40, 10)
-data_list$a50_prior_sd   = c(100, 10,   3,   5,  2, 5, 40,  2)
+data_list$a50_prior_mean = c(400, 80, 15, 120, 60, 80, 40, 60)
+data_list$a50_prior_sd   = c(100, 10,   3,   5,  2, 5, 40,  100)
 
 # fit model --------------------------------------------------------------------
 stan_model_1 = cmdstanr::cmdstan_model("stan/cc.stan")
-n_chains = 4
+n_chains = 2
 fit = stan_model_1$sample(
   data          = data_list,
-  iter_sampling = 10000,
+  iter_sampling = 5000,
   iter_warmup   = 1000,
   chains        = n_chains,
   seed          = 2027
@@ -583,11 +589,12 @@ catch_comp_summary_minus_20 = data.frame(
   M_97.5  = sapply(2:8, function(s) quantile(post[[paste0("M[", s, "]")]], probs = 0.975))
 )
 rownames(catch_comp_summary_minus_20) <- NULL
-print(catch_comp_summary_minus_20)
+catch_comp_summary_minus_20[7,2:5] = catch_comp_summary_minus_20[7,2:5]*scal
 
 ## + 10 % ----------------------------------------------------------------------
 data_dir  = here::here("data")
 files     = list.files(data_dir, pattern = "\\.csv$", full.names = TRUE)
+files = files[!grepl("ShrimpRegression.csv", files)]
 data_list = lapply(files, read.csv) 
 names(data_list) = tools::file_path_sans_ext(basename(files))
 
@@ -681,15 +688,15 @@ data_list = list(N_total = length(counts_concat),
 data_list$M_prior_mean = c(catch_curve_summary_table$M_mean[1:8])
 data_list$M_prior_sd = c(catch_curve_summary_table$M_sd[1:8] * 4) # multiply by 4 to widen the prior
 data_list$M_prior_sd[6] = 0.1
-data_list$a50_prior_mean = c(400, 80, 15, 120, 60, 80, 40, 10)
-data_list$a50_prior_sd   = c(100, 10,   3,   5,  2, 5, 40,  2)
+data_list$a50_prior_mean = c(400, 80, 15, 120, 60, 80, 40, 60)
+data_list$a50_prior_sd   = c(100, 10,   3,   5,  2, 5, 40,  100)
 
 # fit model --------------------------------------------------------------------
 stan_model_1 = cmdstanr::cmdstan_model("stan/cc.stan")
-n_chains = 4
+n_chains = 2
 fit = stan_model_1$sample(
   data          = data_list,
-  iter_sampling = 10000,
+  iter_sampling = 5000,
   iter_warmup   = 1000,
   chains        = n_chains,
   seed          = 2027
@@ -708,11 +715,13 @@ catch_comp_summary_plus_10 = data.frame(
   M_97.5  = sapply(2:8, function(s) quantile(post[[paste0("M[", s, "]")]], probs = 0.975))
 )
 rownames(catch_comp_summary_plus_10) <- NULL
-print(catch_comp_summary_plus_10)
+catch_comp_summary_plus_10[7,2:5] = catch_comp_summary_plus_10[7,2:5]*scal
+
 
 ## + 20 % ----------------------------------------------------------------------
 data_dir  = here::here("data")
 files     = list.files(data_dir, pattern = "\\.csv$", full.names = TRUE)
+files = files[!grepl("ShrimpRegression.csv", files)]
 data_list = lapply(files, read.csv) 
 names(data_list) = tools::file_path_sans_ext(basename(files))
 
@@ -806,15 +815,15 @@ data_list = list(N_total = length(counts_concat),
 data_list$M_prior_mean = c(catch_curve_summary_table$M_mean[1:8])
 data_list$M_prior_sd = c(catch_curve_summary_table$M_sd[1:8] * 4) # multiply by 4 to widen the prior
 data_list$M_prior_sd[6] = 0.1
-data_list$a50_prior_mean = c(400, 80, 15, 120, 60, 80, 40, 10)
-data_list$a50_prior_sd   = c(100, 10,   3,   5,  2, 5, 40,  2)
+data_list$a50_prior_mean = c(400, 80, 15, 120, 60, 80, 40, 60)
+data_list$a50_prior_sd   = c(100, 10,   3,   5,  2, 5, 40,  100)
 
 # fit model --------------------------------------------------------------------
 stan_model_1 = cmdstanr::cmdstan_model("stan/cc.stan")
-n_chains = 4
+n_chains = 2
 fit = stan_model_1$sample(
   data          = data_list,
-  iter_sampling = 10000,
+  iter_sampling = 5000,
   iter_warmup   = 1000,
   chains        = n_chains,
   seed          = 2027
@@ -833,7 +842,7 @@ catch_comp_summary_plus_20 = data.frame(
   M_97.5  = sapply(2:8, function(s) quantile(post[[paste0("M[", s, "]")]], probs = 0.975))
 )
 rownames(catch_comp_summary_plus_20) <- NULL
-print(catch_comp_summary_plus_20)
+catch_comp_summary_plus_20[7,2:5] = catch_comp_summary_plus_20[7,2:5]*scal
 
 # Plotting ---------------------------------------------------------------------
 
@@ -875,7 +884,7 @@ catch_comp_summary %>%
 # make a combined plot
 sens_df = rbind(
   catch_curve_summary %>% mutate(type = "Catch curve"),
-  catch_comp_summary %>% mutate(type = "IBCL")
+  catch_comp_summary %>% mutate(type = "IBCaL")
 )
 
 sens_df %>%

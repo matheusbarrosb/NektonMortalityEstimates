@@ -24,6 +24,8 @@ for (file in source_files) source(file)
 ### Load data ------------------------------------------------------------------
 data_dir  = here::here("data")
 files     = list.files(data_dir, pattern = "\\.csv$", full.names = TRUE)
+# exclude 'ShrimpRegression.csv' file before processing
+files = files[!grepl("ShrimpRegression.csv", files)]
 data_list = lapply(files, read.csv) 
 names(data_list) = tools::file_path_sans_ext(basename(files))
 
@@ -38,14 +40,18 @@ for (i in 1:length(data_list)) {
   data_list[[i]]$samp_date = as.Date(data_list[[i]]$samp_date, format = "%d.%m.%Y")
 }
 
+# convert from CL to TL for white shrimp
+data_list$LITSET_PaP$Length = data_list$LITSET_PaP$Length * 4.781 + 5.847
+scal = .24
 # cutting underrepresented lengths
 data_list$CALSAP_PaP = data_list$CALSAP_PaP[data_list$CALSAP_PaP$Length <= 40, ]
 data_list$CYNNEB_PaP = data_list$CYNNEB_PaP[data_list$CYNNEB_PaP$Length <= 100, ]
 data_list$BAICHR_PaP = data_list$BAICHR_PaP[data_list$BAICHR_PaP$Length <= 70, ]
+#data_list$LITSET_PaP = data_list$LITSET_PaP[data_list$LITSET_PaP$Length <= 100, ]
 
 # create length frequency objects
 lfqs = list()
-bin_sizes = c(2,2,1,1,1,1,1,0.5)
+bin_sizes = c(2,2,1,1,1,1,1,1)
 for (i in 1:length(data_list)) {
   lfqs[[i]] = lfqCreate(data     = data_list[[i]],
                         Lname    = "Length",
@@ -138,20 +144,22 @@ data_list = list(N_total = length(counts_concat),
 # add priors and hyperpriors
 data_list$M_prior_mean = c(catch_curve_summary_table$M_mean[1:8])
 data_list$M_prior_sd = c(catch_curve_summary_table$M_sd[1:8] * 4) # multiply by 4 to widen the prior
-data_list$M_prior_sd[6] = 0.1
-data_list$a50_prior_mean = c(400, 80, 15, 120, 60, 80, 40, 10)
-data_list$a50_prior_sd   = c(100, 10,   3,   5,  2, 5, 40,  2)
+# data_list$M_prior_sd[6] = 0.1
+# data_list$M_prior_sd[8] = 0.0005
+data_list$a50_prior_mean = c(400, 80, 15, 120, 60, 80, 40, 60)
+data_list$a50_prior_sd   = c(100, 1,   3,   5,  2, 5, 40,  100)
 
 # fit model --------------------------------------------------------------------
 stan_model_1 = cmdstanr::cmdstan_model("stan/cc.stan")
 stan_model_2 = cmdstanr::cmdstan_model("stan/ccdm.stan")
+stan_model_3 = cmdstanr::cmdstan_model("stan/cc_log.stan")
 
 n_chains = 4
 
 fit = stan_model_1$sample(
   data          = data_list,
   iter_sampling = 10000,
-  iter_warmup   = 1000,
+  iter_warmup   = 2000,
   chains        = n_chains,
   seed          = 2027
 )
@@ -165,6 +173,136 @@ if (all(fit$summary(variables = c("a50", "M"))$rhat < 1.01)) {
 
 fit$summary(variables = c("a50", "M")) %>%
   dplyr::select(variable, mean, sd, rhat, ess_bulk, ess_tail)
+
+# Produce convergence plots for each M, a50, and k from cmdstanr fit with ggplot2
+library(ggplot2)
+library(tidyr)
+library(dplyr)
+library(purrr)
+
+# Extract draws for M, a50, and k
+post = fit$draws(variables = c("M", "a50", "k"), format = "df")
+
+# Plotting MCMC traceplots -----------------------------------------------------
+post %>%
+  pivot_longer(cols = everything(), names_to = c(".value", "species"), names_pattern = "(.*)\\[(\\d+)\\]") %>%
+  mutate(species = as.numeric(species)) %>% mutate(iteration = row_number() %% nrow(post) + 1) %>%
+  # add chain number for every 10K iterations for each species, there were only four chains so it has to be 1 - 4
+  mutate(chain = (iteration - 1) %/% 10000 + 1) %>%
+  filter(!is.na(M) & !is.na(a50) & !is.na(k)) %>% 
+  filter(iteration %% 10 == 0) %>%
+  filter(species != 1) %>%
+  pivot_longer(cols = c(M), names_to = "parameter") %>%
+  mutate(species = factor(species, 
+                          levels = 2:8, 
+                          labels = c("Silver perch", "Blue crab", "White trout", "Spotted seatrout",
+                                     "Gulf killifish", "Pinfish", "White shrimp"))) %>%
+  mutate(value = ifelse(species == "White shrimp", value * scal, value)) %>%
+  ggplot(aes(x = iteration, y = value, color = as.factor(chain))) +
+  geom_line() +
+  facet_wrap(~species, scales = "free_y", nrow = 4) +
+  labs(x = "Iteration",
+       y = expression(M~"(day"^{-1}*")"),
+       color = "Chain") +
+  custom_theme() +
+  theme(legend.position = "bottom") +
+  scale_color_manual(values = PNWColors::pnw_palette("Bay", n = 4))
+
+ggsave(
+  filename = file.path(here::here("res", "figures"), "M_traceplots.pdf"),
+  plot = last_plot(),
+  width = 6, height = 5, dpi = 300
+)
+
+post %>%
+  pivot_longer(cols = everything(), names_to = c(".value", "species"), names_pattern = "(.*)\\[(\\d+)\\]") %>%
+  mutate(species = as.numeric(species)) %>% mutate(iteration = row_number() %% nrow(post) + 1) %>%
+  mutate(species = factor(species, 
+                          levels = 2:8, 
+                          labels = c("Silver perch", "Blue crab", "White trout", "Spotted seatrout",
+                                     "Gulf killifish", "Pinfish", "White shrimp"))) %>%
+  # add chain number for every 10K iterations for each species, there were only four chains so it has to be 1 - 4
+  mutate(chain = (iteration - 1) %/% 10000 + 1) %>%
+  filter(!is.na(a50)) %>%
+  filter(iteration %% 20 == 0) %>%
+  filter(species != 1) %>%
+  
+  ggplot(aes(x = iteration, y = a50, color = as.factor(chain))) +
+  geom_line() +
+  facet_wrap(~species, scales = "free_y", nrow = 4) +
+  labs(x = "Iteration",
+       y = expression(a[50]~"(days)"),
+       color = "Chain") +
+  custom_theme() +
+  theme(legend.position = "bottom") +
+  scale_color_manual(values = PNWColors::pnw_palette("Bay", n = 4))
+
+ggsave(
+  filename = file.path(here::here("res", "figures"), "a50_traceplots.pdf"),
+  plot = last_plot(),
+  width = 6, height = 5, dpi = 300
+)
+
+post %>%
+  pivot_longer(cols = everything(), names_to = c(".value", "species"), names_pattern = "(.*)\\[(\\d+)\\]") %>%
+  mutate(species = as.numeric(species)) %>% mutate(iteration = row_number() %% nrow(post) + 1) %>%
+  mutate(species = factor(species, 
+                          levels = 2:8, 
+                          labels = c("Silver perch", "Blue crab", "White trout", "Spotted seatrout",
+                                     "Gulf killifish", "Pinfish", "White shrimp"))) %>%
+  # add chain number for every 10K iterations for each species, there were only four chains so it has to be 1 - 4
+  mutate(chain = (iteration - 1) %/% 10000 + 1) %>%
+  filter(!is.na(k)) %>%
+  filter(iteration %% 2 == 0) %>%
+  filter(species != 1) %>%
+  
+  ggplot(aes(x = iteration, y = k, color = as.factor(chain))) +
+  geom_line() +
+  facet_wrap(~species, scales = "free_y", nrow = 4) +
+  labs(x = "Iteration",
+       y = expression(k~"(day"^{-1}*")"),
+       color = "Chain") +
+  custom_theme() +
+  theme(legend.position = "bottom") +
+  scale_color_manual(values = PNWColors::pnw_palette("Bay", n = 4))
+
+ggsave(
+  filename = file.path(here::here("res", "figures"), "k_traceplots.pdf"),
+  plot = last_plot(),
+  width = 6, height = 5, dpi = 300
+)
+
+# Plotting potential scale reduction factor
+library(bayesplot)
+library(ggplot2)
+library(dplyr)
+library(tidyr)
+# Extract the Rhat values for M, a50, and k
+fit$summary(variables = c("M", "a50", "k")) %>%
+  select(variable, rhat) %>%
+  mutate(species = as.numeric(gsub(".*\\[(\\d+)\\]", "\\1", variable))) %>%
+  filter(species != 1) %>%
+  mutate(species = factor(species, 
+                          levels = 2:8, 
+                          labels = c("Silver perch", "Blue crab", "White trout", "Spotted seatrout",
+                                     "Gulf killifish", "Pinfish", "White shrimp"))) %>%
+  mutate(parameter = gsub("\\[.*\\]", "", variable)) %>%
+  mutate(parameter = ifelse(parameter == "k", "s", parameter)) %>%
+  filter(!is.na(rhat)) %>%
+  ggplot(aes(x = species, y = rhat, color = parameter)) +
+  geom_point(size = 3) +
+  geom_hline(yintercept = 1, linetype = "dashed", color = "red") +
+  labs(x = "Species", y = expression(R^{"^"})) +
+  custom_theme() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1),
+        legend.title = element_blank(), legend.position = "right") +
+  ylim(0.9995, 1.001)
+
+ggsave(
+  filename = file.path(here::here("res", "figures"), "rhat.pdf"),
+  plot = last_plot(),
+  width = 4, height = 3, dpi = 300
+)
 
 # Plotting ---------------------------------------------------------------------
 # 1. Selectivity curves
@@ -295,4 +433,5 @@ catch_comp_summary_table <- data.frame(
   M_97.5  = sapply(2:8, function(s) quantile(post[[paste0("M[", s, "]")]], probs = 0.975))
 )
 rownames(catch_comp_summary_table) <- NULL
+catch_comp_summary_table[7,2:5] = catch_comp_summary_table[7,2:5]*scal 
 print(catch_comp_summary_table)

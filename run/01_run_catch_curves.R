@@ -23,6 +23,7 @@ for (file in source_files) source(file)
 ### Load data ------------------------------------------------------------------
 data_dir  = here::here("data")
 files     = list.files(data_dir, pattern = "\\.csv$", full.names = TRUE)
+files = files[!grepl("ShrimpRegression.csv", files)]
 data_list = lapply(files, read.csv) 
 
 names(data_list) = tools::file_path_sans_ext(basename(files))
@@ -61,15 +62,18 @@ for (i in 1:length(catches)) {
   colnames(dfs[[i]])[2] = "sd_catches"
 }; names(dfs) = names(data_list)
 
+# convert white shrimp CL to TL
+dfs$LITSET_PaP$mids = dfs$LITSET_PaP$mids * 4.781 + 5.847
+
 ## Run catch curves ------------------------------------------------------------
 k_list    = c(0.25, 0.11/30, 0.513, 0.325/365, 0.61, 2.43/365, 1.35, 0.815)
 linf_list = c(410, 145, NA, 336.85, NA, 87.27, NA, NA)
 absolute  = ifelse(is.na(linf_list), TRUE, FALSE)
-ex_points = c(30, 75, 85, 2, 108, 1, 27, 3)
+ex_points = c(30, 75, 86, 2, 108, 1, 27, 3)
 bin_size  = c(2, 1, 2, 0.1, 2, 0.001, 3, 1)
 
 cc_res = list()
-N_runs = 1000
+N_runs = 10000
 t0     = FALSE
 plot   = FALSE
 for (i in 1:length(data_list)) {
@@ -131,7 +135,7 @@ plot_params = tibble::tibble(
   pars     = list(c(0.11/30, 145), 0.513, c(k_list[4], linf_list[4]), k_list[5], c(k_list[6], linf_list[6]), k_list[7], k_list[8]),
   absolute = c(FALSE, TRUE, FALSE, TRUE, FALSE, TRUE, TRUE),
   bin_size = bin_size[-1],
-  xlim     = list(c(50,210), c(0,80), c(100,270), c(60, 130), c(60,220), c(20,110), c(5,30)),
+  xlim     = list(c(50,210), c(0,80), c(100,270), c(60, 130), c(60,220), c(20,110), c(35, 160)),
   ylim     = list(c(0,3), c(1,4), NULL, c(1.5,3.5), NULL, c(1,3.5), NULL),
   title    = titles[2:8]
 )
@@ -176,7 +180,7 @@ ggsave(
 # summary of M posterior distributions (means, sds, quantiles) for each species
 catch_curve_summary_table = data.frame(
   sp     = titles,
-  M_mean = sapply(cc_res, function(x) mean(x$Z)),
+  M_mean = sapply(cc_res, function(x) mean(x$`Z posterior distribution`, na.rm = TRUE)),
   M_sd   = sapply(cc_res, function(x) sd(x$`Z posterior distribution`, na.rm = TRUE)),
   M_2.5  = sapply(cc_res, function(x) quantile(x$`Z posterior distribution`, probs = 0.025, na.rm = TRUE)),
   M_97.5 = sapply(cc_res, function(x) quantile(x$`Z posterior distribution`, probs = 0.975, na.rm = TRUE))

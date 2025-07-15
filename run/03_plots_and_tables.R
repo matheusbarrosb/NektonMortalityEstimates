@@ -1,3 +1,10 @@
+data_dir  = here::here("data")
+files     = list.files(data_dir, pattern = "\\.csv$", full.names = TRUE)
+files = files[!grepl("ShrimpRegression.csv", files)]
+data_list = lapply(files, read.csv) 
+
+names(data_list) = tools::file_path_sans_ext(basename(files))
+
 for (i in 1:length(data_list)) {
   data_list[[i]]$samp_date = as.Date(data_list[[i]]$samp_date, format = "%d.%m.%Y")
 }
@@ -61,7 +68,7 @@ ggsave(
 # plot M posterior distribution across methods
 M_df = rbind(
   catch_curve_summary_table %>% mutate(method = "Catch curves"),
-    catch_comp_summary_table %>% mutate(method = "IBCL")
+    catch_comp_summary_table %>% mutate(method = "IBCaL")
 )
 
 M_df[4,4] = 0
@@ -76,7 +83,7 @@ M_df %>%
   custom_theme() +
   xlab("") +
   ylab(expression(M~"(day"^{-1}*")")) +
-  scale_color_manual(values = c("IBCL" = "red", "Catch curves" = "black")) +
+  scale_color_manual(values = c("IBCaL" = "red", "Catch curves" = "black")) +
   theme(legend.title = element_blank(),
         legend.position = "top")
 
@@ -91,7 +98,7 @@ library(kableExtra)
 # Combine the two summary tables
 combined_summary_table <- merge(
   catch_curve_summary_table %>% mutate(method = "Catch curves"),
-  catch_comp_summary_table %>% mutate(method = "IBCL"),
+  catch_comp_summary_table %>% mutate(method = "IBCaL"),
   by = "sp", suffixes = c("_iLCCC", "_CatchComp")
 ); catch_curve_summary_table[7,4] = 0
 # Select relevant columns and rename them
@@ -119,7 +126,7 @@ table = kable(pretty_table, format = "pipe", escape = TRUE, digits = 3) %>%
   row_spec(0, bold = TRUE) %>%
   row_spec(nrow(pretty_table), bold = FALSE)
 
-
+res_dir = here::here("res", "tables")
 kableExtra::save_kable(
   table,
   file = file.path(res_dir, "M_summary_table.pdf"),

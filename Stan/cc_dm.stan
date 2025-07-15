@@ -21,10 +21,10 @@ parameters {
 }
 model {
   // Priors --------------------------------------------------------------------
-  k     ~ normal(0, 2);
+  k     ~ normal(0, 10);
   a50   ~ normal(a50_prior_mean, a50_prior_sd);
   M     ~ normal(M_prior_mean, M_prior_sd);
-  alpha ~ exponential(1);
+  alpha ~ normal(200,0.1);
   
   // Likelihood ----------------------------------------------------------------
   for (s in 1:K) {
